@@ -10,15 +10,15 @@ namespace YounesCo_Backend.Models
 
         [Required]
         [Display(Name = "User Id")]
-        [StringLength(450, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(450, ErrorMessage = "Maximum length for user id is {1}")]
         public string UserId { get; set; }
 
         [Required]
-        [StringLength(256, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(256, ErrorMessage = "Maximum length for exception source is {1}")]
         public string Source { get; set; }
 
         [Required]
-        [StringLength(1000, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(1000, ErrorMessage = "Maximum length for message is {1}")]
         public string Message { get; set; }
 
         [Display(Name = "Created At")]

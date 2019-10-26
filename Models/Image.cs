@@ -15,13 +15,12 @@ namespace YounesCo_Backend.Models
         [Range(0, 1000000000)]
         public int ColorId { get; set; }
 
-        [Required]
         [ForeignKey("ColorId")]
         public Color Color { get; set; }
 
         [Required]
         [Display(Name = "Image Source")]
-        [StringLength(1000, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(1000, ErrorMessage = "Maximum length for image source is {1}")]
         public string ImageSource { get; set; }
 
         [Required]

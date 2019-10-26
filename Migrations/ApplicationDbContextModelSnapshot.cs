@@ -424,7 +424,7 @@ namespace YounesCo_Backend.Migrations
                     b.Property<bool>("Deleted")
                         .HasColumnType("bit");
 
-                    b.Property<DateTime>("RequestedOn")
+                    b.Property<DateTime?>("RequestedOn")
                         .HasColumnType("datetime2")
                         .HasMaxLength(100);
 

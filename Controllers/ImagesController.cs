@@ -47,7 +47,7 @@ namespace YounesCo_Backend.Controllers
 
         [HttpGet("[action]/{id}")]
         [Authorize(Policy = "RequireLoggedIn")]
-        public async Task<ActionResult<Image>> GetImageByIdAsync([FromRoute] int id)
+        public async Task<ActionResult<Image>> GetImageById([FromRoute] int id)
         {
             if (!ModelState.IsValid)
             {
@@ -89,7 +89,7 @@ namespace YounesCo_Backend.Controllers
 
         [HttpPost("[action]")]
         [Authorize(Policy = "RequireAdministratorRole")]
-        public async Task<IActionResult> CreateImageAsync([FromBody] Image data)
+        public async Task<IActionResult> CreateImage([FromBody] Image data)
         {
             var newImage = new Image
             {
@@ -112,16 +112,11 @@ namespace YounesCo_Backend.Controllers
 
         [HttpPut("[action]/{id}")]
         [Authorize(Policy = "RequireAdministratorRole")]
-        public async Task<IActionResult> UpdateImageAsync([FromRoute] int id, [FromBody] Image image)
+        public async Task<IActionResult> UpdateImage([FromRoute] int id, [FromBody] Image image)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
-            }
-
-            if (id != image.ImageId)
-            {
-                return BadRequest();
             }
 
             var findImage = _db.Images.FirstOrDefault(c => c.ImageId == id);
@@ -150,7 +145,7 @@ namespace YounesCo_Backend.Controllers
 
         [HttpDelete("[action]/{id}")]
         [Authorize(Policy = "RequireAdministratorRole")]
-        public async Task<ActionResult<Image>> DeleteImageAsync([FromRoute] int id)
+        public async Task<ActionResult<Image>> DeleteImage([FromRoute] int id)
         {
             var image = await _db.Images.FindAsync(id);
 
@@ -173,7 +168,7 @@ namespace YounesCo_Backend.Controllers
 
         [HttpDelete("[action]/{id}")]
         [Authorize(Policy = "RequireLoggedIn")]
-        public async Task<ActionResult<Favorite>> DeleteImagesByColorIdAsync([FromRoute] int id)
+        public async Task<ActionResult<Favorite>> DeleteImagesByColorId([FromRoute] int id)
         {
             var result = _db.Images.ToList().Where(f => f.ColorId == id);
 

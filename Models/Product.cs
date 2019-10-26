@@ -13,11 +13,11 @@ namespace YounesCo_Backend.Models
         public int ProductId { get; set; }
 
         [Required]
-        [StringLength(256, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(256, ErrorMessage = "Maximum length for product name is {1}")]
         public string Name { get; set; }
 
         [Required]
-        [StringLength(450, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(450, ErrorMessage = "Maximum length for product description is {1}")]
         public string Description { get; set; }
 
         [Required]
@@ -33,7 +33,6 @@ namespace YounesCo_Backend.Models
         [Range(0, 1000000000)]
         public int CategoryId { get; set; }
 
-        [Required]
         [ForeignKey("CategoryId")]
         public Category Category { get; set; }
 

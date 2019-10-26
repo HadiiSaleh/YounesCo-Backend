@@ -15,7 +15,6 @@ namespace YounesCo_Backend.Models
         [Range(0, 1000000000)]
         public int ProductId { get; set; }
 
-        [Required]
         [ForeignKey("ProductId")]
         public Product Product { get; set; }
 
@@ -24,7 +23,6 @@ namespace YounesCo_Backend.Models
         [Range(0, 1000000000)]
         public int OrderId { get; set; }
 
-        [Required]
         [ForeignKey("OrderId")]
         public Order Order { get; set; }
 
@@ -33,7 +31,7 @@ namespace YounesCo_Backend.Models
         public int Quantity { get; set; }
 
         [Required]
-        [StringLength(50, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(50, ErrorMessage = "Maximum length for color name is {1}")]
         [Display(Name = "Color")]
         public string ColorName { get; set; }
 
@@ -52,7 +50,6 @@ namespace YounesCo_Backend.Models
         [Range(0, 1000000000)]
         public int ColorId { get; set; }
 
-        [Required]
         [ForeignKey("ColorId")]
         public Color Color { get; set; }
     }

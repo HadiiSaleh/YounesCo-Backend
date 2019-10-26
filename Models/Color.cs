@@ -16,18 +16,17 @@ namespace YounesCo_Backend.Models
         [Display(Name = "Product Id")]
         public int ProductId { get; set; }
 
-        [Required]
         [ForeignKey("ProductId")]
         public Product Product { get; set; }
 
         [Required]
         [Display(Name = "Color Name")]
-        [StringLength(50, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(50, ErrorMessage = "Maximum length for color name is {1}")]
         public string ColorName { get; set; }
 
         [Required]
         [Display(Name = "Color Code")]
-        [StringLength(50, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(50, ErrorMessage = "Maximum length for color code is {1}")]
         public string ColorCode { get; set; }
 
         [Required]

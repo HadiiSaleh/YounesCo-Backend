@@ -12,7 +12,7 @@ namespace YounesCo_Backend.Models
 
         [Required]
         [Display(Name = "Category Name")]
-        [StringLength(50, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(50, ErrorMessage = "Maximum length for category name is {1}")]
         public string CategoryName { get; set; }
 
         [Display(Name = "Created At")]

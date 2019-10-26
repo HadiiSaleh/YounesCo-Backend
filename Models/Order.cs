@@ -14,17 +14,15 @@ namespace YounesCo_Backend.Models
 
         [Required]
         [Display(Name = "Customer Id")]
-        [StringLength(450, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(450, ErrorMessage = "Maximum length for customer id is {1}")]
         public string CustomerId { get; set; }
 
-        [Required]
         [ForeignKey("CustomerId")]
         public AppUser Customer { get; set; }
 
         [Display(Name = "Requested On")]
-        [DataType(DataType.Date)]
         [MaxLength(100)]
-        public DateTime RequestedOn { get; set; }
+        public DateTime? RequestedOn { get; set; }
 
         [Required]
         [Display(Name = "Total Price")]

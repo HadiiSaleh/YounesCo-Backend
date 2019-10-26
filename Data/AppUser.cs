@@ -9,23 +9,23 @@ namespace YounesCo_Backend.Data
     public class AppUser : IdentityUser
     {
         [Required]
-        [StringLength(256, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(256, ErrorMessage = "Maximum length for first name is {1}")]
         [RegularExpression("^[A-Za-z]+$")]
         [Display(Name = "First Name")]
         public string FirstName { get; set; }
 
-        [StringLength(256, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(256, ErrorMessage = "Maximum length for middle name is {1}")]
         [RegularExpression("^[A-Za-z]+$")]
         [Display(Name = "Middle Name")]
         public string MiddleName { get; set; }
 
         [Required]
-        [StringLength(256, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(256, ErrorMessage = "Maximum length for last name is {1}")]
         [RegularExpression("^[A-Za-z]+$")]
         [Display(Name = "Last Name")]
         public string LastName { get; set; }
 
-        [StringLength(256, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(256, ErrorMessage = "Maximum length for display name is {1}")]
         [RegularExpression("^[A-Za-z]+$")]
         [Display(Name = "Name")]
         public string DisplayName { get; set; }

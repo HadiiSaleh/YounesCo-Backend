@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using YounesCo_Backend.Data;
@@ -39,11 +41,13 @@ namespace YounesCo_Backend.Controllers
 
         private readonly ExceptionsLoggerService _exceptionLogger;
 
+        private readonly DataCleaner _dataCleaner;
+
         #endregion
 
         #region Constructor 
         public AccountsController(ApplicationDbContext db, UserManager<AppUser> userManager,
-            SignInManager<AppUser> signInManager, RoleManager<IdentityRole> roleManager,
+            SignInManager<AppUser> signInManager, RoleManager<IdentityRole> roleManager, DataCleaner dataCleaner,
             IOptions<AppSettings> appSettings, IEmailSender emailsender, ExceptionsLoggerService exceptionLogger)
         {
             _db = db;
@@ -53,6 +57,7 @@ namespace YounesCo_Backend.Controllers
             _appSettings = appSettings.Value;
             _emailsender = emailsender;
             _exceptionLogger = exceptionLogger;
+            _dataCleaner = dataCleaner;
         }
 
         #endregion
@@ -74,7 +79,7 @@ namespace YounesCo_Backend.Controllers
                 FirstName = registerViewModel.FirstName,
                 MiddleName = registerViewModel.MiddleName,
                 LastName = registerViewModel.LastName,
-                DisplayName = registerViewModel.FirstName + " " + registerViewModel.MiddleName + " " + registerViewModel.LastName,
+                DisplayName = registerViewModel.MiddleName != null ? registerViewModel.FirstName + " " + registerViewModel.MiddleName + " " + registerViewModel.LastName : registerViewModel.FirstName + " " + registerViewModel.LastName,
                 Location = registerViewModel.Location,
                 Deleted = false,
                 SecurityStamp = Guid.NewGuid().ToString()
@@ -133,11 +138,13 @@ namespace YounesCo_Backend.Controllers
 
             if (user == null || user.Deleted) return Unauthorized(new { LoginError = "Please check the login credentials - Invalid Username/Password was entered" });
 
+            var checkPasswordTask = _userManager.CheckPasswordAsync(user, loginViewModel.Password);
+
             var key = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_appSettings.Secret));
 
             double tokenExpiryTime = Convert.ToDouble(_appSettings.ExpireTime);
 
-            if (user != null && await _userManager.CheckPasswordAsync(user, loginViewModel.Password))
+            if (user != null && await checkPasswordTask)
             {
                 // THen Check If Email Is confirmed
                 if (!await _userManager.IsEmailConfirmedAsync(user))
@@ -211,7 +218,7 @@ namespace YounesCo_Backend.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ConfirmEmail(string userId, string code)
         {
-            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(code))
+            if (userId == null || code == null)
             {
                 ModelState.AddModelError("", "User Id and Code are required");
                 return BadRequest(ModelState);
@@ -295,7 +302,7 @@ namespace YounesCo_Backend.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ResetPasswordEmail(string userId, string code)
         {
-            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(code))
+            if (userId == null || code == null)
             {
                 ModelState.AddModelError("", "User Id and Code are required");
                 return BadRequest(ModelState);
@@ -309,7 +316,7 @@ namespace YounesCo_Backend.Controllers
                 return new JsonResult("User Invalid");
             }
 
-            return Redirect("/ResetPassword");
+            return Redirect("/reset-password");
         }
 
         #endregion
@@ -331,8 +338,8 @@ namespace YounesCo_Backend.Controllers
 
                 if (result.Succeeded)
                 {
-
-                    return RedirectToAction("PasswordSet", "Notifications", new { data.Id, data.Code });
+                    return Redirect("/password-set");
+                    //return RedirectToAction("PasswordSet", "Notifications", new { data.Id, data.Code });
 
                 }
             }
@@ -344,25 +351,110 @@ namespace YounesCo_Backend.Controllers
 
         #region GetUsersByRoleAsync
 
-        [HttpGet("[action]/{role}")]
+        [HttpGet("[action]/{data}")]
         [Authorize(Policy = "RequireAdminModeratorRole")]
-        public async Task<IActionResult> GetUsersByRoleAsync([FromRoute] string role)
+        public IActionResult GetUsersByRole([FromRoute] string data)
         {
+            if (data == null || _roleManager.RoleExistsAsync(data).Result == false)
+                return BadRequest(new JsonResult("Please Provide a valid role"));
 
-            if (role == null || _roleManager.RoleExistsAsync(role).Result == false) return BadRequest(new JsonResult("Please Provide a valid role"));
+            var result = (
+                from user in _db.Users
+                join userRole in _db.UserRoles
+                on user.Id equals userRole.UserId
+                join role in _db.Roles
+                on userRole.RoleId equals role.Id
+                where role.Name == data
+                where user.Deleted == false
+                select new BaseUser
+                {
+                    FirstName = user.FirstName,
+                    MiddleName = user.MiddleName,
+                    LastName = user.LastName,
+                    DisplayName = user.DisplayName,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
 
-            var result = await _userManager.GetUsersInRoleAsync(role);
+                    Location = new Address
+                    {
+                        Country = user.Location.Country,
+                        City = user.Location.City,
+                        Region = user.Location.Region,
+                        Street = user.Location.Street,
+                        Building = user.Location.Building,
+                        Floor = user.Location.Floor
+                    },
 
-            foreach (var user in result)
-            {
-                if (user.Deleted == true) result.Remove(user);
-            }
+                    CreatedAt = user.CreatedAt,
+                    UpdatedAt = user.UpdatedAt,
+                    Deleted = user.Deleted,
+                    role = role.Name,
+
+                }
+                ).ToList();
 
             if (result.Count() > 0)
                 return Ok(result);
 
             else
-                return BadRequest(new JsonResult("No " + role + "s to show"));
+                return BadRequest(new JsonResult("No " + data + "s to show"));
+        }
+
+        #endregion
+
+        #region GetAllUsersAsync
+
+        [HttpGet("[action]")]
+        [Authorize(Policy = "RequireAdminModeratorRole")]
+        //[Obsolete]
+        public IActionResult GetAllUsers()
+        {
+            var users = (
+                from user in _db.Users
+                join userRole in _db.UserRoles
+                on user.Id equals userRole.UserId
+                join role in _db.Roles
+                on userRole.RoleId equals role.Id
+                where user.Deleted == false
+                select new BaseUser
+                {
+                    FirstName = user.FirstName,
+                    MiddleName = user.MiddleName,
+                    LastName = user.LastName,
+                    DisplayName = user.DisplayName,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+
+                    Location = new Address
+                    {
+                        Country = user.Location.Country,
+                        City = user.Location.City,
+                        Region = user.Location.Region,
+                        Street = user.Location.Street,
+                        Building = user.Location.Building,
+                        Floor = user.Location.Floor
+                    },
+
+                    CreatedAt = user.CreatedAt,
+                    UpdatedAt = user.UpdatedAt,
+                    Deleted = user.Deleted,
+                    role = role.Name,
+
+                }
+                ).ToList();
+
+            // Clean data
+
+            var result = _dataCleaner.cleanAllUsersListBasedOnRoles(users);
+
+            if (result.Count() == 0 || result == null)
+                return BadRequest(new JsonResult("No users to show"));
+
+            else
+                return Ok(result);
+
         }
 
         #endregion
@@ -371,16 +463,51 @@ namespace YounesCo_Backend.Controllers
 
         [HttpGet("[action]/{id}")]
         [Authorize(Policy = "RequireLoggedIn")]
-        public async Task<IActionResult> GetUserByIdAsync([FromRoute] string id)
+        public async Task<IActionResult> GetUserById([FromRoute] string id)
         {
+            if (id == null) return BadRequest(new JsonResult("NULL Id!"));
 
-            if (id == null) return BadRequest(new JsonResult("Null Id!"));
+            var user = await _db.Users
+                .Include(user => user.Favorites)
+                 .ThenInclude(fav => fav.Product)
+                .Include(user => user.Orders)
+                .SingleOrDefaultAsync(u => u.Id == id)
+                ;
 
-            var result = await _userManager.FindByIdAsync(id);
+            if (user != null && user.Deleted == false)
+            {
+                var jwt = HttpContext.Request.Headers.FirstOrDefault(c => c.Key == "Authorization").Value.ToString().Replace("Bearer ", "");
+                var handler = new JwtSecurityTokenHandler();
+                var token = handler.ReadJwtToken(jwt);
+                var userIdLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "nameid").Value.ToString();
+                var userRoleLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "role").Value.ToString();
 
-            if (result != null && result.Deleted == false)
+                if (userRoleLoggedIn == "Customer" && userIdLoggedIn != user.Id) return Unauthorized();
+
+                var userRole = await _userManager.GetRolesAsync(user);
+
+                var result = new BaseUser
+                {
+                    Id = user.Id,
+                    FirstName = user.FirstName,
+                    MiddleName = user.MiddleName,
+                    LastName = user.LastName,
+                    DisplayName = user.DisplayName,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    Location = user.Location,
+                    CreatedAt = user.CreatedAt,
+                    UpdatedAt = user.UpdatedAt,
+                    Deleted = user.Deleted,
+                    role = userRole[0],
+                    Orders = user.Orders,
+                    Favorites = _dataCleaner.cleanFavorites(user.Favorites)
+                };
+
                 return Ok(result);
 
+            }
             else
                 return BadRequest(new JsonResult("User with id " + id + " not found"));
         }
@@ -391,7 +518,7 @@ namespace YounesCo_Backend.Controllers
 
         [HttpPut("[action]/{id}")]
         [Authorize(Policy = "RequireLoggedIn")]
-        public async Task<IActionResult> UpdateUserByIdAsync([FromRoute] string id, [FromBody] RegisterViewModel user)
+        public async Task<IActionResult> UpdateUserById([FromRoute] string id, [FromBody] BaseUser user)
         {
 
             if (!ModelState.IsValid)
@@ -399,7 +526,7 @@ namespace YounesCo_Backend.Controllers
                 return BadRequest(ModelState);
             }
 
-            if (id == null) return BadRequest(new JsonResult("Null Id!"));
+            if (id == null) return BadRequest(new JsonResult("NULL Id!"));
 
             //here we will hold all the errors of registration
             List<string> errorList = new List<string>();
@@ -411,11 +538,19 @@ namespace YounesCo_Backend.Controllers
                 return NotFound();
             }
 
+            var jwt = HttpContext.Request.Headers.FirstOrDefault(c => c.Key == "Authorization").Value.ToString().Replace("Bearer ", "");
+            var handler = new JwtSecurityTokenHandler();
+            var token = handler.ReadJwtToken(jwt);
+            var userIdLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "nameid").Value.ToString();
+            var userRoleLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "role").Value.ToString();
+
+            if (userRoleLoggedIn == "Customer" && userIdLoggedIn != findUser.Id) return Unauthorized();
+
             // If the user was found
 
             findUser.Email = user.Email;
             findUser.UserName = user.UserName;
-            findUser.PhoneNumber = user.Phone;
+            findUser.PhoneNumber = user.PhoneNumber;
             findUser.FirstName = user.FirstName;
             findUser.MiddleName = user.MiddleName;
             findUser.LastName = user.LastName;
@@ -427,6 +562,7 @@ namespace YounesCo_Backend.Controllers
 
             if (updateUser.Succeeded)
             {
+                await _db.SaveChangesAsync();
 
                 IList<string> roles = await _userManager.GetRolesAsync(findUser);
 
@@ -450,34 +586,110 @@ namespace YounesCo_Backend.Controllers
 
         #endregion
 
-        #region DeleteUserByIdAsync
+        #region ChangeRoleAsync
 
-        [HttpDelete("[action]/{id}")]
+        [HttpPut("[action]/{id}")]
         [Authorize(Policy = "RequireAdminModeratorRole")]
-        public async Task<IActionResult> DeleteUserByIdAsync([FromRoute] string id)
+        public async Task<IActionResult> ChangeRole([FromRoute] string id, [FromBody] string role)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (id == null) return BadRequest(new JsonResult("Null Id!"));
+            if (id == null || role == null) return BadRequest(new JsonResult("NULL data!"));
 
             //find user's account
             var findUser = await _userManager.FindByIdAsync(id);
 
-            if (findUser == null || findUser.Deleted == true) return NotFound();
+            if (findUser == null || findUser.Deleted == true) return NotFound(new JsonResult("User Not Found Or Already Deleted"));
 
-            //delete doctor's account
+            var findRole = await _roleManager.RoleExistsAsync(role);
+
+            if (findRole == false) return NotFound(new JsonResult("Role Not Found"));
+
+            if (await _userManager.IsInRoleAsync(findUser, role)) return Ok(new JsonResult("User is already in this role"));
+
+            var userRole = await _userManager.GetRolesAsync(findUser);
+
+            await _userManager.RemoveFromRolesAsync(findUser, userRole);
+
+            var changeRole = await _userManager.AddToRoleAsync(findUser, role);
+
+            if (changeRole.Succeeded)
+                return Ok(new JsonResult("The user with username " + findUser.UserName + "'s role is changed to " + role));
+
+            return BadRequest(new JsonResult("Role Change is Failed!"));
+        }
+
+        #endregion
+
+        #region DeleteUserByIdAsync
+
+        [HttpPut("[action]/{id}")]
+        [Authorize(Policy = "RequireAdminModeratorRole")]
+        public async Task<IActionResult> DeleteUserById([FromRoute] string id)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if (id == null) return BadRequest(new JsonResult("NULL Id!"));
+
+            //find user's account
+            var findUser = await _userManager.FindByIdAsync(id);
+
+            if (findUser == null || findUser.Deleted == true) return NotFound(new JsonResult("User Not Found Or Already Deleted"));
+
+            //delete user's account
             findUser.Deleted = true;
             findUser.UpdatedAt = DateTime.Now;
 
             var deleteuser = await _userManager.UpdateAsync(findUser);
 
             if (deleteuser.Succeeded)
+            {
+                await _db.SaveChangesAsync();
                 return Ok(new JsonResult("The user with username " + findUser.UserName + " is Deleted"));
+            }
 
             return BadRequest("Delete Failed!");
+        }
+
+        #endregion
+
+        #region UnDelteUserByIdAsync
+
+        [HttpPut("[action]/{id}")]
+        [Authorize(Policy = "RequireAdminModeratorRole")]
+        public async Task<IActionResult> UnDelteUserById([FromRoute] string id)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if (id == null) return BadRequest(new JsonResult("NULL Id!"));
+
+            //find user's account
+            var findUser = await _userManager.FindByIdAsync(id);
+
+            if (findUser == null || findUser.Deleted == false) return NotFound(new JsonResult("User Not Found Or Already Active"));
+
+            //delete user's account
+            findUser.Deleted = false;
+            findUser.UpdatedAt = DateTime.Now;
+
+            var unDeleteuser = await _userManager.UpdateAsync(findUser);
+
+            if (unDeleteuser.Succeeded)
+            {
+                await _db.SaveChangesAsync();
+                return Ok(new JsonResult("The user with username " + findUser.UserName + " is Undeleted"));
+            }
+
+            return BadRequest(new JsonResult("Undelete Failed!"));
         }
 
         #endregion

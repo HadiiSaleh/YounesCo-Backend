@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
 using YounesCo_Backend.Data;
 using YounesCo_Backend.Email;
 using YounesCo_Backend.Helpers;
@@ -43,6 +44,10 @@ namespace YounesCo_Backend
             // Logger Service
 
             services.AddTransient<ExceptionsLoggerService>();
+
+            // Data Cleaner Service
+
+            services.AddTransient<DataCleaner>();
 
             //Enable CORS
 
@@ -121,7 +126,8 @@ namespace YounesCo_Backend
                 options.AddPolicy("RequireModeratorCustomerRole", policy => policy.RequireRole("Moderator", "Customer").RequireAuthenticatedUser());
             });
 
-            services.AddControllers();
+            services.AddControllers()
+                .AddNewtonsoftJson(opt => opt.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore);
 
         }
 

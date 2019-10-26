@@ -48,7 +48,7 @@ namespace YounesCo_Backend.Controllers
 
         [HttpGet("[action]/{id}")]
         [Authorize(Policy = "RequireLoggedIn")]
-        public async Task<ActionResult<Category>> GetCategoryByIdAsync([FromRoute] int id)
+        public async Task<ActionResult<Category>> GetCategoryById([FromRoute] int id)
         {
             if (!ModelState.IsValid)
             {
@@ -57,11 +57,14 @@ namespace YounesCo_Backend.Controllers
 
             if (id <= 0) return BadRequest(new JsonResult("Invalid Id!"));
 
-            var category = await _db.Categories.FindAsync(id);
+            var category = await _db.Categories
+                .Include(cat => cat.Products)
+                .SingleOrDefaultAsync(c => c.CategoryId == id)
+                ;
 
             if (category == null || category.Deleted)
             {
-                return NotFound();
+                return NotFound(new JsonResult("Category Not Found"));
             }
 
             return Ok(new JsonResult(category));
@@ -73,7 +76,7 @@ namespace YounesCo_Backend.Controllers
 
         [HttpPost("[action]")]
         [Authorize(Policy = "RequireAdministratorRole")]
-        public async Task<IActionResult> CreateCategoryAsync([FromBody] Category data)
+        public async Task<IActionResult> CreateCategory([FromBody] Category data)
         {
             var newcategory = new Category
             {
@@ -81,7 +84,10 @@ namespace YounesCo_Backend.Controllers
                 Deleted = false,
             };
 
-            await _db.Categories.AddAsync(newcategory);
+            var createCat = await _db.Categories.AddAsync(newcategory);
+
+            if (createCat == null)
+                return BadRequest(new JsonResult("Category Creation Failed"));
 
             await _db.SaveChangesAsync();
 
@@ -95,23 +101,18 @@ namespace YounesCo_Backend.Controllers
 
         [HttpPut("[action]/{id}")]
         [Authorize(Policy = "RequireAdministratorRole")]
-        public async Task<IActionResult> UpdateCategoryAsync([FromRoute] int id, [FromBody] Category category)
+        public async Task<IActionResult> UpdateCategory([FromRoute] int id, [FromBody] Category category)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (id != category.CategoryId)
-            {
-                return BadRequest();
-            }
-
-            var findCategory = _db.Categories.FirstOrDefault(c => c.CategoryId == id);
+            var findCategory = await _db.Categories.FindAsync(id);
 
             if (findCategory == null)
             {
-                return NotFound();
+                return NotFound("Category Not Found");
             }
 
             // If the category was found
@@ -130,9 +131,9 @@ namespace YounesCo_Backend.Controllers
 
         #region DeleteCategoryAsync
 
-        [HttpDelete("[action]/{id}")]
+        [HttpPut("[action]/{id}")]
         [Authorize(Policy = "RequireAdministratorRole")]
-        public async Task<ActionResult<Category>> DeleteCategoryAsync([FromRoute] int id)
+        public async Task<ActionResult<Category>> DeleteCategory([FromRoute] int id)
         {
             var category = await _db.Categories.FindAsync(id);
 
@@ -150,6 +151,32 @@ namespace YounesCo_Backend.Controllers
 
             // Finally return the result to client
             return Ok(new JsonResult("The Category with id " + id + " is deleted."));
+        }
+
+        #endregion
+
+        #region UnDeleteCategoryAsync
+
+        [HttpPut("[action]/{id}")]
+        [Authorize(Policy = "RequireAdministratorRole")]
+        public async Task<ActionResult<Category>> UnDeleteCategory([FromRoute] int id)
+        {
+            var category = await _db.Categories.FindAsync(id);
+
+            if (category == null)
+            {
+                return NotFound();
+            }
+
+            category.Deleted = false;
+            category.UpdatedAt = DateTime.Now;
+
+            _db.Entry(category).State = EntityState.Modified;
+
+            await _db.SaveChangesAsync();
+
+            // Finally return the result to client
+            return Ok(new JsonResult("The Category with id " + id + " is UnDeleted."));
         }
 
         #endregion

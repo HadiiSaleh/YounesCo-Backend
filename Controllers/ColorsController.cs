@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -48,7 +47,7 @@ namespace YounesCo_Backend.Controllers
 
         [HttpGet("[action]/{id}")]
         [Authorize(Policy = "RequireLoggedIn")]
-        public async Task<ActionResult<Color>> GetColorByIdAsync([FromRoute] int id)
+        public async Task<ActionResult<Color>> GetColorById([FromRoute] int id)
         {
             if (!ModelState.IsValid)
             {
@@ -90,7 +89,7 @@ namespace YounesCo_Backend.Controllers
 
         [HttpPost("[action]")]
         [Authorize(Policy = "RequireAdministratorRole")]
-        public async Task<IActionResult> CreateColorAsync([FromBody] Color data)
+        public async Task<IActionResult> CreateColor([FromBody] Color data)
         {
             var newcolor = new Color
             {
@@ -115,16 +114,11 @@ namespace YounesCo_Backend.Controllers
 
         [HttpPut("[action]/{id}")]
         [Authorize(Policy = "RequireAdministratorRole")]
-        public async Task<IActionResult> UpdateColorAsync([FromRoute] int id, [FromBody] Color color)
+        public async Task<IActionResult> UpdateColor([FromRoute] int id, [FromBody] Color color)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
-            }
-
-            if (id != color.ColorId)
-            {
-                return BadRequest();
             }
 
             var findColor = _db.Colors.FirstOrDefault(c => c.ColorId == id);
@@ -153,9 +147,9 @@ namespace YounesCo_Backend.Controllers
 
         #region DeleteColorAsync
 
-        [HttpDelete("[action]/{id}")]
+        [HttpPut("[action]/{id}")]
         [Authorize(Policy = "RequireAdministratorRole")]
-        public async Task<ActionResult<Color>> DeleteColorAsync([FromRoute] int id)
+        public async Task<ActionResult<Color>> DeleteColor([FromRoute] int id)
         {
             var color = await _db.Colors.FindAsync(id);
 
@@ -181,7 +175,7 @@ namespace YounesCo_Backend.Controllers
 
         [HttpDelete("[action]/{id}")]
         [Authorize(Policy = "RequireLoggedIn")]
-        public async Task<ActionResult<Color>> DeleteColorByProductIdAsync([FromRoute] int id)
+        public async Task<ActionResult<Color>> DeleteColorByProductId([FromRoute] int id)
         {
             var result = _db.Colors.ToList().Where(f => f.ProductId == id);
 

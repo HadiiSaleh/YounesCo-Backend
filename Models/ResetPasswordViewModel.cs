@@ -5,17 +5,17 @@ namespace YounesCo_Backend.Models
     public class ResetPasswordViewModel
     {
         [Required]
-        [StringLength(400, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(400, ErrorMessage = "Maximum length for id is {1}")]
         [Display(Name = "Id")]
         public string Id { get; set; }
 
         [Required]
-        [StringLength(400, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(400, ErrorMessage = "Maximum length for code is {1}")]
         [Display(Name = "Code")]
         public string Code { get; set; }
 
         [Required]
-        [StringLength(256, ErrorMessage = "Maximum length is {1}")]
+        [StringLength(256, ErrorMessage = "Maximum length for password is {1}")]
         [RegularExpression("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9_]).*$")]
         [DataType(DataType.Password)]
         public string Password { get; set; }
