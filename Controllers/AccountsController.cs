@@ -75,7 +75,7 @@ namespace YounesCo_Backend.Controllers
             {
                 Email = registerViewModel.Email,
                 UserName = registerViewModel.UserName,
-                PhoneNumber = registerViewModel.Phone,
+                PhoneNumber = registerViewModel.PhoneNumber,
                 FirstName = registerViewModel.FirstName,
                 MiddleName = registerViewModel.MiddleName,
                 LastName = registerViewModel.LastName,
@@ -86,6 +86,10 @@ namespace YounesCo_Backend.Controllers
             };
 
             var result = await _userManager.CreateAsync(user, registerViewModel.Password);
+
+            var jwt = HttpContext.Request.Headers.FirstOrDefault(c => c.Key == "Authorization").Value.ToString();
+
+            if (jwt == "") registerViewModel.Role = "Customer";
 
             if (result.Succeeded)
             {
@@ -100,7 +104,7 @@ namespace YounesCo_Backend.Controllers
 
                     var send = await _emailsender.SendEmailAsync(user.Email, "younesco.com - Confirm Your Email", "Please confirm your e-mail by clicking this link: <a href=\"" + callbackUrl + "\">click here</a>");
 
-                    return Created("", new { username = user.UserName, email = user.Email, status = 1, message = "Registration Successful" });
+                    return Created("", new JsonResult(registerViewModel));
                 }
                 catch (Exception ex)
                 {
@@ -291,7 +295,7 @@ namespace YounesCo_Backend.Controllers
 
             }
 
-            return new JsonResult("Email Does Not Exists!");
+            return NotFound(new JsonResult("Email Not Found!"));
         }
 
         #endregion
@@ -313,10 +317,10 @@ namespace YounesCo_Backend.Controllers
 
             if (user == null)
             {
-                return new JsonResult("User Invalid");
+                return NotFound(new JsonResult("Invalid User!"));
             }
 
-            return Redirect("/reset-password");
+            return Ok(new JsonResult("Succeeded!"));
         }
 
         #endregion
@@ -327,7 +331,7 @@ namespace YounesCo_Backend.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordViewModel data)
         {
-            if (data == null) return new JsonResult("Input Invalid");
+            if (data == null) return BadRequest(new JsonResult("Input Invalid"));
 
             var user = await _userManager.FindByIdAsync(data.Id);
 
@@ -336,15 +340,11 @@ namespace YounesCo_Backend.Controllers
 
                 var result = await _userManager.ResetPasswordAsync(user, data.Code, data.Password);
 
-                if (result.Succeeded)
-                {
-                    return Redirect("/password-set");
-                    //return RedirectToAction("PasswordSet", "Notifications", new { data.Id, data.Code });
+                if (result.Succeeded) return Ok(new JsonResult("Password reset succeeded!"));
 
-                }
             }
 
-            return new JsonResult("Reset Failed");
+            return BadRequest(new JsonResult("Reset Failed"));
         }
 
         #endregion
@@ -564,12 +564,7 @@ namespace YounesCo_Backend.Controllers
             {
                 await _db.SaveChangesAsync();
 
-                IList<string> roles = await _userManager.GetRolesAsync(findUser);
-
-                if (roles.Count() > 0)
-                    return Ok(new JsonResult(roles[0] + " " + user.UserName + " is updated successfuly."));
-
-                return Ok(new JsonResult("user " + user.UserName + " is updated successfuly."));
+                return Ok(new JsonResult(user));
             }
 
             else

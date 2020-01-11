@@ -1,23 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "D:\\hadi\\YounesCo\\YounesCo-Backend\\YounesCo-Backend.csproj": {}
+    "C:\\Users\\pc\\Desktop\\YounesCo\\YounesCo-Backend\\YounesCo-Backend.csproj": {}
   },
   "projects": {
-    "D:\\hadi\\YounesCo\\YounesCo-Backend\\YounesCo-Backend.csproj": {
+    "C:\\Users\\pc\\Desktop\\YounesCo\\YounesCo-Backend\\YounesCo-Backend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\hadi\\YounesCo\\YounesCo-Backend\\YounesCo-Backend.csproj",
+        "projectUniqueName": "C:\\Users\\pc\\Desktop\\YounesCo\\YounesCo-Backend\\YounesCo-Backend.csproj",
         "projectName": "YounesCo-Backend",
-        "projectPath": "D:\\hadi\\YounesCo\\YounesCo-Backend\\YounesCo-Backend.csproj",
-        "packagesPath": "C:\\Users\\Hadi\\.nuget\\packages\\",
-        "outputPath": "D:\\hadi\\YounesCo\\YounesCo-Backend\\obj\\",
+        "projectPath": "C:\\Users\\pc\\Desktop\\YounesCo\\YounesCo-Backend\\YounesCo-Backend.csproj",
+        "packagesPath": "C:\\Users\\pc\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\pc\\Desktop\\YounesCo\\YounesCo-Backend\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
-        ],
         "configFilePaths": [
-          "C:\\Users\\Hadi\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\pc\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -106,6 +103,24 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[3.0.1, 3.0.1]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Host.win-x64",
+              "version": "[3.0.1, 3.0.1]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[3.0.0, 3.0.0]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[3.0.0, 3.0.0]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.AspNetCore.App": {
               "privateAssets": "none"
@@ -114,7 +129,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.0.100\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.1.100\\RuntimeIdentifierGraph.json"
         }
       }
     }
