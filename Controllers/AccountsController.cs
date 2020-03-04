@@ -87,10 +87,6 @@ namespace YounesCo_Backend.Controllers
 
             var result = await _userManager.CreateAsync(user, registerViewModel.Password);
 
-            var jwt = HttpContext.Request.Headers.FirstOrDefault(c => c.Key == "Authorization").Value.ToString();
-
-            if (jwt == "Bearer null") registerViewModel.Role = "Customer";
-
             if (result.Succeeded)
             {
                 await _userManager.AddToRoleAsync(user, registerViewModel.Role);
@@ -188,10 +184,10 @@ namespace YounesCo_Backend.Controllers
                 {
                     Subject = new ClaimsIdentity(new Claim[]
                     {
-                        new Claim(JwtRegisteredClaimNames.Sub, loginViewModel.UserName),
-                        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                         new Claim(ClaimTypes.NameIdentifier, user.Id),
                         new Claim(ClaimTypes.Role, roles.FirstOrDefault()),
+                        new Claim(ClaimTypes.Name, loginViewModel.UserName),
+                        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                         new Claim("LoggedOn", DateTime.Now.ToString()),
 
                      }),
@@ -231,16 +227,24 @@ namespace YounesCo_Backend.Controllers
 
             var user = await _userManager.FindByIdAsync(userId);
 
-            if (user == null) return NotFound(new JsonResult("User Invalid"));
+            if (user == null)
+            {
+                return new JsonResult("User Invalid");
+            }
 
-
-            if (user.EmailConfirmed) return Redirect("/session/sign-in");
-            //return Ok(new { redirect = "SignIn" });
+            if (user.EmailConfirmed)
+            {
+                return Redirect("/session/signin");
+            }
 
             var result = await _userManager.ConfirmEmailAsync(user, code);
 
-            if (result.Succeeded) return Redirect("/session/thank-you");
-            //return Ok(new { redirect = "ThankYou" });
+            if (result.Succeeded)
+            {
+                return Redirect("/session/thank-you");
+                //return RedirectToAction("EmailConfirmed", "Notifications", new { userId, code });
+
+            }
 
             else
             {
@@ -287,7 +291,7 @@ namespace YounesCo_Backend.Controllers
 
             }
 
-            return NotFound(new JsonResult("Email Not Found!"));
+            return new JsonResult("Email Does Not Exists!");
         }
 
         #endregion
@@ -309,11 +313,10 @@ namespace YounesCo_Backend.Controllers
 
             if (user == null)
             {
-                return NotFound(new JsonResult("Invalid User!"));
+                return new JsonResult("User Invalid");
             }
 
-            //return Ok(new JsonResult("Succeeded!"));
-            return Redirect("/session/reset-password?id=" + userId + "&code=" + code);
+            return Redirect("/session/reset-password");
         }
 
         #endregion
@@ -324,7 +327,7 @@ namespace YounesCo_Backend.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordViewModel data)
         {
-            if (data == null) return BadRequest(new JsonResult("Input Invalid"));
+            if (data == null) return new JsonResult("Input Invalid");
 
             var user = await _userManager.FindByIdAsync(data.Id);
 
@@ -333,11 +336,15 @@ namespace YounesCo_Backend.Controllers
 
                 var result = await _userManager.ResetPasswordAsync(user, data.Code, data.Password);
 
-                if (result.Succeeded) return Ok(new JsonResult("Password reset succeeded!"));
+                if (result.Succeeded)
+                {
+                    return Redirect("/session/thank-you");
+                    //return RedirectToAction("PasswordSet", "Notifications", new { data.Id, data.Code });
 
+                }
             }
 
-            return BadRequest(new JsonResult("Reset Failed"));
+            return new JsonResult("Reset Failed");
         }
 
         #endregion
@@ -409,9 +416,9 @@ namespace YounesCo_Backend.Controllers
                 on user.Id equals userRole.UserId
                 join role in _db.Roles
                 on userRole.RoleId equals role.Id
-                where user.Deleted == false
                 select new BaseUser
                 {
+                    Id = user.Id,
                     FirstName = user.FirstName,
                     MiddleName = user.MiddleName,
                     LastName = user.LastName,
@@ -460,6 +467,8 @@ namespace YounesCo_Backend.Controllers
         {
             if (id == null) return BadRequest(new JsonResult("NULL Id!"));
 
+            if (User.IsInRole("Customer") && id != User.FindFirst(ClaimTypes.NameIdentifier).Value) return Unauthorized();
+
             var user = await _db.Users
                 .Include(user => user.Favorites)
                  .ThenInclude(fav => fav.Product)
@@ -467,19 +476,28 @@ namespace YounesCo_Backend.Controllers
                 .SingleOrDefaultAsync(u => u.Id == id)
                 ;
 
-            if (user != null && user.Deleted == false)
+            if (user != null)
             {
-                var jwt = HttpContext.Request.Headers.FirstOrDefault(c => c.Key == "Authorization").Value.ToString().Replace("Bearer ", "");
-                var handler = new JwtSecurityTokenHandler();
-                var token = handler.ReadJwtToken(jwt);
-                var userIdLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "nameid").Value.ToString();
-                var userRoleLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "role").Value.ToString();
-
-                if ((userRoleLoggedIn == "Customer" && userIdLoggedIn != user.Id) || (userRoleLoggedIn != "Admin" && await _userManager.IsInRoleAsync(user, "Admin"))) return Unauthorized();
-
                 var userRole = await _userManager.GetRolesAsync(user);
 
-                var result = _dataCleaner.cleanUser(user, userRole[0]);
+                var result = new BaseUser
+                {
+                    Id = user.Id,
+                    FirstName = user.FirstName,
+                    MiddleName = user.MiddleName,
+                    LastName = user.LastName,
+                    DisplayName = user.DisplayName,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    Location = user.Location,
+                    CreatedAt = user.CreatedAt,
+                    UpdatedAt = user.UpdatedAt,
+                    Deleted = user.Deleted,
+                    role = userRole[0],
+                    Orders = user.Orders,
+                    Favorites = _dataCleaner.cleanFavorites(user.Favorites)
+                };
 
                 return Ok(result);
 
@@ -498,6 +516,8 @@ namespace YounesCo_Backend.Controllers
         {
             if (username == null) return BadRequest(new JsonResult("NULL UserName!"));
 
+            if (User.IsInRole("Customer") && username != User.FindFirst(ClaimTypes.Name).Value) return Unauthorized();
+
             var user = await _db.Users
                 .Include(user => user.Favorites)
                  .ThenInclude(fav => fav.Product)
@@ -505,16 +525,8 @@ namespace YounesCo_Backend.Controllers
                 .SingleOrDefaultAsync(u => u.UserName == username)
                 ;
 
-            if (user != null && user.Deleted == false)
+            if (user != null)
             {
-                var jwt = HttpContext.Request.Headers.FirstOrDefault(c => c.Key == "Authorization").Value.ToString().Replace("Bearer ", "");
-                var handler = new JwtSecurityTokenHandler();
-                var token = handler.ReadJwtToken(jwt);
-                var userIdLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "nameid").Value.ToString();
-                var userRoleLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "role").Value.ToString();
-
-                if ((userRoleLoggedIn == "Customer" && userIdLoggedIn != user.Id) || (userRoleLoggedIn != "Admin" && await _userManager.IsInRoleAsync(user, "Admin"))) return Unauthorized();
-
                 var userRole = await _userManager.GetRolesAsync(user);
 
                 var result = new BaseUser
@@ -556,21 +568,14 @@ namespace YounesCo_Backend.Controllers
 
             if (id == null) return BadRequest(new JsonResult("NULL Id!"));
 
+            if (User.IsInRole("Customer") && id != User.FindFirst(ClaimTypes.NameIdentifier).Value) return Unauthorized();
+
             //here we will hold all the errors of registration
             List<string> errorList = new List<string>();
 
             var findUser = await _userManager.FindByIdAsync(id);
 
             if (findUser == null || findUser.Deleted == true) return NotFound();
-
-
-            var jwt = HttpContext.Request.Headers.FirstOrDefault(c => c.Key == "Authorization").Value.ToString().Replace("Bearer ", "");
-            var handler = new JwtSecurityTokenHandler();
-            var token = handler.ReadJwtToken(jwt);
-            var userIdLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "nameid").Value.ToString();
-            var userRoleLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "role").Value.ToString();
-
-            if ((userRoleLoggedIn == "Customer" && userIdLoggedIn != findUser.Id) || (userRoleLoggedIn != "Admin" && await _userManager.IsInRoleAsync(findUser, "Admin"))) return Unauthorized();
 
             // If the user was found
 
@@ -589,8 +594,8 @@ namespace YounesCo_Backend.Controllers
             if (updateUser.Succeeded)
             {
                 await _db.SaveChangesAsync();
-
-                return Ok(findUser);
+                user.Id = findUser.Id;
+                return Ok(user);
             }
 
             else
@@ -628,14 +633,6 @@ namespace YounesCo_Backend.Controllers
             var findRole = await _roleManager.RoleExistsAsync(role);
 
             if (findRole == false) return NotFound(new JsonResult("Role Not Found"));
-
-            var jwt = HttpContext.Request.Headers.FirstOrDefault(c => c.Key == "Authorization").Value.ToString().Replace("Bearer ", "");
-            var handler = new JwtSecurityTokenHandler();
-            var token = handler.ReadJwtToken(jwt);
-            var userIdLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "nameid").Value.ToString();
-            var userRoleLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "role").Value.ToString();
-
-            if (userRoleLoggedIn != "Admin" && await _userManager.IsInRoleAsync(findUser, "Admin")) return Unauthorized();
 
             if (await _userManager.IsInRoleAsync(findUser, role)) return Ok(new JsonResult("User is already in this role"));
 
