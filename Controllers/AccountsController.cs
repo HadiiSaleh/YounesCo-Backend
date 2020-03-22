@@ -353,12 +353,12 @@ namespace YounesCo_Backend.Controllers
 
         [HttpGet("[action]/{data}")]
         [Authorize(Policy = "RequireAdminModeratorRole")]
-        public IActionResult GetUsersByRole([FromRoute] string data)
+        public async Task<IActionResult> GetUsersByRole([FromRoute] string data)
         {
             if (data == null || _roleManager.RoleExistsAsync(data).Result == false)
                 return BadRequest(new JsonResult("Please Provide a valid role"));
 
-            var result = (
+            var result = await (
                 from user in _db.Users
                 join userRole in _db.UserRoles
                 on user.Id equals userRole.UserId
@@ -392,13 +392,196 @@ namespace YounesCo_Backend.Controllers
                     role = role.Name,
 
                 }
-                ).ToList();
+                ).ToListAsync();
 
             if (result.Count() > 0)
                 return Ok(result);
 
             else
                 return BadRequest(new JsonResult("No " + data + "s to show"));
+        }
+
+        #endregion
+
+        #region GetUsersByRolePagedAsync
+
+        [HttpGet("[action]/{data}")]
+        [Authorize(Policy = "RequireAdminModeratorRole")]
+        public async Task<IActionResult> GetUsersByRolePaged([FromRoute] string data, [FromQuery] int pageNumber, [FromQuery]int pageSize, [FromQuery] string sortDirection, [FromQuery] string filter)
+        {
+            if (data == null || _roleManager.RoleExistsAsync(data).Result == false)
+                return BadRequest(new JsonResult("Please Provide a valid role"));
+            if (!(pageNumber > 0) || !(pageSize > 0))
+                return BadRequest(new JsonResult("Please Provide a valid page size and number"));
+
+            PagedResult<BaseUser> result;
+            if (!String.IsNullOrEmpty(filter))
+            {
+                if (sortDirection == "desc")
+                {
+                    result = await (
+                    from user in _db.Users
+                    join userRole in _db.UserRoles
+                    on user.Id equals userRole.UserId
+                    join role in _db.Roles
+                    on userRole.RoleId equals role.Id
+                    where role.Name == data
+                    where user.DisplayName.Contains(filter) || user.Id.Contains(filter) || user.UserName.Contains(filter) || user.Email.Contains(filter) || user.PhoneNumber.Contains(filter)
+                    orderby user.CreatedAt descending
+                    select new BaseUser
+                    {
+                        Id = user.Id,
+                        FirstName = user.FirstName,
+                        MiddleName = user.MiddleName,
+                        LastName = user.LastName,
+                        DisplayName = user.DisplayName,
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        PhoneNumber = user.PhoneNumber,
+
+                        Location = new Address
+                        {
+                            Country = user.Location.Country,
+                            City = user.Location.City,
+                            Region = user.Location.Region,
+                            Street = user.Location.Street,
+                            Building = user.Location.Building,
+                            Floor = user.Location.Floor
+                        },
+
+                        CreatedAt = user.CreatedAt,
+                        UpdatedAt = user.UpdatedAt,
+                        Deleted = user.Deleted,
+                        role = role.Name,
+
+                    }
+                    ).GetPagedAsync(pageNumber, pageSize);
+                }
+                else
+                {
+                    result = await (
+                    from user in _db.Users
+                    join userRole in _db.UserRoles
+                    on user.Id equals userRole.UserId
+                    join role in _db.Roles
+                    on userRole.RoleId equals role.Id
+                    where role.Name == data
+                    where user.DisplayName.Contains(filter) || user.Id.Contains(filter) || user.UserName.Contains(filter) || user.Email.Contains(filter) || user.PhoneNumber.Contains(filter)
+                    orderby user.CreatedAt ascending
+                    select new BaseUser
+                    {
+                        Id = user.Id,
+                        FirstName = user.FirstName,
+                        MiddleName = user.MiddleName,
+                        LastName = user.LastName,
+                        DisplayName = user.DisplayName,
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        PhoneNumber = user.PhoneNumber,
+
+                        Location = new Address
+                        {
+                            Country = user.Location.Country,
+                            City = user.Location.City,
+                            Region = user.Location.Region,
+                            Street = user.Location.Street,
+                            Building = user.Location.Building,
+                            Floor = user.Location.Floor
+                        },
+
+                        CreatedAt = user.CreatedAt,
+                        UpdatedAt = user.UpdatedAt,
+                        Deleted = user.Deleted,
+                        role = role.Name,
+
+                    }
+                    ).GetPagedAsync(pageNumber, pageSize);
+                }
+            }
+            else
+            {
+                if (sortDirection == "desc")
+                {
+                    result = await (
+                    from user in _db.Users
+                    join userRole in _db.UserRoles
+                    on user.Id equals userRole.UserId
+                    join role in _db.Roles
+                    on userRole.RoleId equals role.Id
+                    where role.Name == data
+                    orderby user.CreatedAt descending
+                    select new BaseUser
+                    {
+                        Id = user.Id,
+                        FirstName = user.FirstName,
+                        MiddleName = user.MiddleName,
+                        LastName = user.LastName,
+                        DisplayName = user.DisplayName,
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        PhoneNumber = user.PhoneNumber,
+
+                        Location = new Address
+                        {
+                            Country = user.Location.Country,
+                            City = user.Location.City,
+                            Region = user.Location.Region,
+                            Street = user.Location.Street,
+                            Building = user.Location.Building,
+                            Floor = user.Location.Floor
+                        },
+
+                        CreatedAt = user.CreatedAt,
+                        UpdatedAt = user.UpdatedAt,
+                        Deleted = user.Deleted,
+                        role = role.Name,
+
+                    }
+                    ).GetPagedAsync(pageNumber, pageSize);
+                }
+                else
+                {
+                    result = await (
+                    from user in _db.Users
+                    join userRole in _db.UserRoles
+                    on user.Id equals userRole.UserId
+                    join role in _db.Roles
+                    on userRole.RoleId equals role.Id
+                    where role.Name == data
+                    orderby user.CreatedAt ascending
+                    select new BaseUser
+                    {
+                        Id = user.Id,
+                        FirstName = user.FirstName,
+                        MiddleName = user.MiddleName,
+                        LastName = user.LastName,
+                        DisplayName = user.DisplayName,
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        PhoneNumber = user.PhoneNumber,
+
+                        Location = new Address
+                        {
+                            Country = user.Location.Country,
+                            City = user.Location.City,
+                            Region = user.Location.Region,
+                            Street = user.Location.Street,
+                            Building = user.Location.Building,
+                            Floor = user.Location.Floor
+                        },
+
+                        CreatedAt = user.CreatedAt,
+                        UpdatedAt = user.UpdatedAt,
+                        Deleted = user.Deleted,
+                        role = role.Name,
+
+                    }
+                    ).GetPagedAsync(pageNumber, pageSize);
+                }
+            }
+
+
+            return Ok(result);
         }
 
         #endregion
