@@ -39,6 +39,8 @@ namespace YounesCo_Backend.Services
 
         public List<Product> cleanFavorites(List<Favorite> data)
         {
+            if (data == null) return new List<Product>();
+
             int size = data.Count();
 
             if (size == 0) return new List<Product>();
@@ -55,6 +57,30 @@ namespace YounesCo_Backend.Services
 
 
             return products;
+        }
+
+        public BaseUser cleanUser(AppUser user, string firstRole)
+        {
+            var result = new BaseUser
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                MiddleName = user.MiddleName,
+                LastName = user.LastName,
+                DisplayName = user.DisplayName,
+                UserName = user.UserName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                Location = user.Location,
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt,
+                Deleted = user.Deleted,
+                role = firstRole,
+                Orders = user.Orders != null ? user.Orders : new List<Order>(),
+                Favorites = cleanFavorites(user.Favorites)
+            };
+
+            return result;
         }
 
     }

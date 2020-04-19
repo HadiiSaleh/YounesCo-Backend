@@ -75,7 +75,7 @@ namespace YounesCo_Backend.Controllers
             {
                 Email = registerViewModel.Email,
                 UserName = registerViewModel.UserName,
-                PhoneNumber = registerViewModel.Phone,
+                PhoneNumber = registerViewModel.PhoneNumber,
                 FirstName = registerViewModel.FirstName,
                 MiddleName = registerViewModel.MiddleName,
                 LastName = registerViewModel.LastName,
@@ -184,10 +184,10 @@ namespace YounesCo_Backend.Controllers
                 {
                     Subject = new ClaimsIdentity(new Claim[]
                     {
-                        new Claim(JwtRegisteredClaimNames.Sub, loginViewModel.UserName),
-                        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                         new Claim(ClaimTypes.NameIdentifier, user.Id),
                         new Claim(ClaimTypes.Role, roles.FirstOrDefault()),
+                        new Claim(ClaimTypes.Name, loginViewModel.UserName),
+                        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                         new Claim("LoggedOn", DateTime.Now.ToString()),
 
                      }),
@@ -234,14 +234,14 @@ namespace YounesCo_Backend.Controllers
 
             if (user.EmailConfirmed)
             {
-                return Redirect("/login");
+                return Redirect("/session/signin");
             }
 
             var result = await _userManager.ConfirmEmailAsync(user, code);
 
             if (result.Succeeded)
             {
-                return Redirect("/email-confirmed");
+                return Redirect("/session/thank-you");
                 //return RedirectToAction("EmailConfirmed", "Notifications", new { userId, code });
 
             }
@@ -316,7 +316,7 @@ namespace YounesCo_Backend.Controllers
                 return new JsonResult("User Invalid");
             }
 
-            return Redirect("/reset-password");
+            return Redirect("/session/reset-password");
         }
 
         #endregion
@@ -338,7 +338,7 @@ namespace YounesCo_Backend.Controllers
 
                 if (result.Succeeded)
                 {
-                    return Redirect("/password-set");
+                    return Redirect("/session/thank-you");
                     //return RedirectToAction("PasswordSet", "Notifications", new { data.Id, data.Code });
 
                 }
@@ -353,21 +353,21 @@ namespace YounesCo_Backend.Controllers
 
         [HttpGet("[action]/{data}")]
         [Authorize(Policy = "RequireAdminModeratorRole")]
-        public IActionResult GetUsersByRole([FromRoute] string data)
+        public async Task<IActionResult> GetUsersByRole([FromRoute] string data)
         {
             if (data == null || _roleManager.RoleExistsAsync(data).Result == false)
                 return BadRequest(new JsonResult("Please Provide a valid role"));
 
-            var result = (
+            var result = await (
                 from user in _db.Users
                 join userRole in _db.UserRoles
                 on user.Id equals userRole.UserId
                 join role in _db.Roles
                 on userRole.RoleId equals role.Id
                 where role.Name == data
-                where user.Deleted == false
                 select new BaseUser
                 {
+                    Id = user.Id,
                     FirstName = user.FirstName,
                     MiddleName = user.MiddleName,
                     LastName = user.LastName,
@@ -392,13 +392,196 @@ namespace YounesCo_Backend.Controllers
                     role = role.Name,
 
                 }
-                ).ToList();
+                ).ToListAsync();
 
             if (result.Count() > 0)
                 return Ok(result);
 
             else
                 return BadRequest(new JsonResult("No " + data + "s to show"));
+        }
+
+        #endregion
+
+        #region GetUsersByRolePagedAsync
+
+        [HttpGet("[action]/{data}")]
+        [Authorize(Policy = "RequireAdminModeratorRole")]
+        public async Task<IActionResult> GetUsersByRolePaged([FromRoute] string data, [FromQuery] int pageNumber, [FromQuery]int pageSize, [FromQuery] string sortDirection, [FromQuery] string filter)
+        {
+            if (data == null || _roleManager.RoleExistsAsync(data).Result == false)
+                return BadRequest(new JsonResult("Please Provide a valid role"));
+            if (!(pageNumber > 0) || !(pageSize > 0))
+                return BadRequest(new JsonResult("Please Provide a valid page size and number"));
+
+            PagedResult<BaseUser> result;
+            if (!String.IsNullOrEmpty(filter))
+            {
+                if (sortDirection == "desc")
+                {
+                    result = await (
+                    from user in _db.Users
+                    join userRole in _db.UserRoles
+                    on user.Id equals userRole.UserId
+                    join role in _db.Roles
+                    on userRole.RoleId equals role.Id
+                    where role.Name == data
+                    where user.DisplayName.Contains(filter) || user.Id.Contains(filter) || user.UserName.Contains(filter) || user.Email.Contains(filter) || user.PhoneNumber.Contains(filter)
+                    orderby user.CreatedAt descending
+                    select new BaseUser
+                    {
+                        Id = user.Id,
+                        FirstName = user.FirstName,
+                        MiddleName = user.MiddleName,
+                        LastName = user.LastName,
+                        DisplayName = user.DisplayName,
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        PhoneNumber = user.PhoneNumber,
+
+                        Location = new Address
+                        {
+                            Country = user.Location.Country,
+                            City = user.Location.City,
+                            Region = user.Location.Region,
+                            Street = user.Location.Street,
+                            Building = user.Location.Building,
+                            Floor = user.Location.Floor
+                        },
+
+                        CreatedAt = user.CreatedAt,
+                        UpdatedAt = user.UpdatedAt,
+                        Deleted = user.Deleted,
+                        role = role.Name,
+
+                    }
+                    ).GetPagedAsync(pageNumber, pageSize);
+                }
+                else
+                {
+                    result = await (
+                    from user in _db.Users
+                    join userRole in _db.UserRoles
+                    on user.Id equals userRole.UserId
+                    join role in _db.Roles
+                    on userRole.RoleId equals role.Id
+                    where role.Name == data
+                    where user.DisplayName.Contains(filter) || user.Id.Contains(filter) || user.UserName.Contains(filter) || user.Email.Contains(filter) || user.PhoneNumber.Contains(filter)
+                    orderby user.CreatedAt ascending
+                    select new BaseUser
+                    {
+                        Id = user.Id,
+                        FirstName = user.FirstName,
+                        MiddleName = user.MiddleName,
+                        LastName = user.LastName,
+                        DisplayName = user.DisplayName,
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        PhoneNumber = user.PhoneNumber,
+
+                        Location = new Address
+                        {
+                            Country = user.Location.Country,
+                            City = user.Location.City,
+                            Region = user.Location.Region,
+                            Street = user.Location.Street,
+                            Building = user.Location.Building,
+                            Floor = user.Location.Floor
+                        },
+
+                        CreatedAt = user.CreatedAt,
+                        UpdatedAt = user.UpdatedAt,
+                        Deleted = user.Deleted,
+                        role = role.Name,
+
+                    }
+                    ).GetPagedAsync(pageNumber, pageSize);
+                }
+            }
+            else
+            {
+                if (sortDirection == "desc")
+                {
+                    result = await (
+                    from user in _db.Users
+                    join userRole in _db.UserRoles
+                    on user.Id equals userRole.UserId
+                    join role in _db.Roles
+                    on userRole.RoleId equals role.Id
+                    where role.Name == data
+                    orderby user.CreatedAt descending
+                    select new BaseUser
+                    {
+                        Id = user.Id,
+                        FirstName = user.FirstName,
+                        MiddleName = user.MiddleName,
+                        LastName = user.LastName,
+                        DisplayName = user.DisplayName,
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        PhoneNumber = user.PhoneNumber,
+
+                        Location = new Address
+                        {
+                            Country = user.Location.Country,
+                            City = user.Location.City,
+                            Region = user.Location.Region,
+                            Street = user.Location.Street,
+                            Building = user.Location.Building,
+                            Floor = user.Location.Floor
+                        },
+
+                        CreatedAt = user.CreatedAt,
+                        UpdatedAt = user.UpdatedAt,
+                        Deleted = user.Deleted,
+                        role = role.Name,
+
+                    }
+                    ).GetPagedAsync(pageNumber, pageSize);
+                }
+                else
+                {
+                    result = await (
+                    from user in _db.Users
+                    join userRole in _db.UserRoles
+                    on user.Id equals userRole.UserId
+                    join role in _db.Roles
+                    on userRole.RoleId equals role.Id
+                    where role.Name == data
+                    orderby user.CreatedAt ascending
+                    select new BaseUser
+                    {
+                        Id = user.Id,
+                        FirstName = user.FirstName,
+                        MiddleName = user.MiddleName,
+                        LastName = user.LastName,
+                        DisplayName = user.DisplayName,
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        PhoneNumber = user.PhoneNumber,
+
+                        Location = new Address
+                        {
+                            Country = user.Location.Country,
+                            City = user.Location.City,
+                            Region = user.Location.Region,
+                            Street = user.Location.Street,
+                            Building = user.Location.Building,
+                            Floor = user.Location.Floor
+                        },
+
+                        CreatedAt = user.CreatedAt,
+                        UpdatedAt = user.UpdatedAt,
+                        Deleted = user.Deleted,
+                        role = role.Name,
+
+                    }
+                    ).GetPagedAsync(pageNumber, pageSize);
+                }
+            }
+
+
+            return Ok(result);
         }
 
         #endregion
@@ -416,9 +599,9 @@ namespace YounesCo_Backend.Controllers
                 on user.Id equals userRole.UserId
                 join role in _db.Roles
                 on userRole.RoleId equals role.Id
-                where user.Deleted == false
                 select new BaseUser
                 {
+                    Id = user.Id,
                     FirstName = user.FirstName,
                     MiddleName = user.MiddleName,
                     LastName = user.LastName,
@@ -467,6 +650,8 @@ namespace YounesCo_Backend.Controllers
         {
             if (id == null) return BadRequest(new JsonResult("NULL Id!"));
 
+            if (User.IsInRole("Customer") && id != User.FindFirst(ClaimTypes.NameIdentifier).Value) return Unauthorized();
+
             var user = await _db.Users
                 .Include(user => user.Favorites)
                  .ThenInclude(fav => fav.Product)
@@ -474,16 +659,8 @@ namespace YounesCo_Backend.Controllers
                 .SingleOrDefaultAsync(u => u.Id == id)
                 ;
 
-            if (user != null && user.Deleted == false)
+            if (user != null)
             {
-                var jwt = HttpContext.Request.Headers.FirstOrDefault(c => c.Key == "Authorization").Value.ToString().Replace("Bearer ", "");
-                var handler = new JwtSecurityTokenHandler();
-                var token = handler.ReadJwtToken(jwt);
-                var userIdLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "nameid").Value.ToString();
-                var userRoleLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "role").Value.ToString();
-
-                if (userRoleLoggedIn == "Customer" && userIdLoggedIn != user.Id) return Unauthorized();
-
                 var userRole = await _userManager.GetRolesAsync(user);
 
                 var result = new BaseUser
@@ -514,6 +691,55 @@ namespace YounesCo_Backend.Controllers
 
         #endregion
 
+        #region GetUserByUsernameAsync
+
+        [HttpGet("[action]/{username}")]
+        [Authorize(Policy = "RequireLoggedIn")]
+        public async Task<IActionResult> GetUserByUsername([FromRoute] string username)
+        {
+            if (username == null) return BadRequest(new JsonResult("NULL UserName!"));
+
+            if (User.IsInRole("Customer") && username != User.FindFirst(ClaimTypes.Name).Value) return Unauthorized();
+
+            var user = await _db.Users
+                .Include(user => user.Favorites)
+                 .ThenInclude(fav => fav.Product)
+                .Include(user => user.Orders)
+                .SingleOrDefaultAsync(u => u.UserName == username)
+                ;
+
+            if (user != null)
+            {
+                var userRole = await _userManager.GetRolesAsync(user);
+
+                var result = new BaseUser
+                {
+                    Id = user.Id,
+                    FirstName = user.FirstName,
+                    MiddleName = user.MiddleName,
+                    LastName = user.LastName,
+                    DisplayName = user.DisplayName,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    Location = user.Location,
+                    CreatedAt = user.CreatedAt,
+                    UpdatedAt = user.UpdatedAt,
+                    Deleted = user.Deleted,
+                    role = userRole[0],
+                    Orders = user.Orders,
+                    Favorites = _dataCleaner.cleanFavorites(user.Favorites)
+                };
+
+                return Ok(result);
+
+            }
+            else
+                return BadRequest(new JsonResult("User with username " + username + " not found"));
+        }
+
+        #endregion
+
         #region UpdateUserByIdAsync
 
         [HttpPut("[action]/{id}")]
@@ -521,30 +747,18 @@ namespace YounesCo_Backend.Controllers
         public async Task<IActionResult> UpdateUserById([FromRoute] string id, [FromBody] BaseUser user)
         {
 
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             if (id == null) return BadRequest(new JsonResult("NULL Id!"));
+
+            if (User.IsInRole("Customer") && id != User.FindFirst(ClaimTypes.NameIdentifier).Value) return Unauthorized();
 
             //here we will hold all the errors of registration
             List<string> errorList = new List<string>();
 
             var findUser = await _userManager.FindByIdAsync(id);
 
-            if (findUser == null || findUser.Deleted == true)
-            {
-                return NotFound();
-            }
-
-            var jwt = HttpContext.Request.Headers.FirstOrDefault(c => c.Key == "Authorization").Value.ToString().Replace("Bearer ", "");
-            var handler = new JwtSecurityTokenHandler();
-            var token = handler.ReadJwtToken(jwt);
-            var userIdLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "nameid").Value.ToString();
-            var userRoleLoggedIn = token.Payload.SingleOrDefault(p => p.Key == "role").Value.ToString();
-
-            if (userRoleLoggedIn == "Customer" && userIdLoggedIn != findUser.Id) return Unauthorized();
+            if (findUser == null || findUser.Deleted == true) return NotFound();
 
             // If the user was found
 
@@ -563,13 +777,8 @@ namespace YounesCo_Backend.Controllers
             if (updateUser.Succeeded)
             {
                 await _db.SaveChangesAsync();
-
-                IList<string> roles = await _userManager.GetRolesAsync(findUser);
-
-                if (roles.Count() > 0)
-                    return Ok(new JsonResult(roles[0] + " " + user.UserName + " is updated successfuly."));
-
-                return Ok(new JsonResult("user " + user.UserName + " is updated successfuly."));
+                user.Id = findUser.Id;
+                return Ok(user);
             }
 
             else
@@ -626,7 +835,7 @@ namespace YounesCo_Backend.Controllers
 
         #region DeleteUserByIdAsync
 
-        [HttpPut("[action]/{id}")]
+        [HttpDelete("[action]/{id}")]
         [Authorize(Policy = "RequireAdminModeratorRole")]
         public async Task<IActionResult> DeleteUserById([FromRoute] string id)
         {
@@ -661,7 +870,7 @@ namespace YounesCo_Backend.Controllers
 
         #region UnDelteUserByIdAsync
 
-        [HttpPut("[action]/{id}")]
+        [HttpDelete("[action]/{id}")]
         [Authorize(Policy = "RequireAdminModeratorRole")]
         public async Task<IActionResult> UnDelteUserById([FromRoute] string id)
         {

@@ -27,7 +27,7 @@ namespace YounesCo_Backend.Models
         [DataType(DataType.PhoneNumber)]
         [StringLength(256, ErrorMessage = "Maximum length for phone number is {1}")]
         [RegularExpression("[+][0-9]{3} [0-9]{8}")]
-        public string Phone { get; set; }
+        public string PhoneNumber { get; set; }
 
         [Required]
         [StringLength(256, ErrorMessage = "Maximum length for role is {1}")]

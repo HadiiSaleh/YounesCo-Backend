@@ -72,5 +72,8 @@ namespace YounesCo_Backend.Data
         public DbSet<Favorite> Favorites { get; set; }
 
         public DbSet<ExceptionLog> ExceptionLogs { get; set; }
+
+        public DbSet<Invoice> Invoices { get; set; }
+
     }
 }
