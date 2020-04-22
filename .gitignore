@@ -1,0 +1,7 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs/YounesCo-Backend/v16
+/.vs
+/obj/Release/netcoreapp3.0
