@@ -18,6 +18,7 @@ using YounesCo_Backend.Email;
 using YounesCo_Backend.Helpers;
 using YounesCo_Backend.Models;
 using YounesCo_Backend.Services;
+using YounesCo_Backend.ViewModels;
 
 namespace YounesCo_Backend.Controllers
 {
@@ -142,7 +143,7 @@ namespace YounesCo_Backend.Controllers
 
             var key = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_appSettings.Secret));
 
-            double tokenExpiryTime = Convert.ToDouble(_appSettings.ExpireTime);
+            double tokenExpiryTime = Convert.ToDouble(_appSettings.ExpireTime) * 24.0;
 
             if (user != null && await checkPasswordTask)
             {

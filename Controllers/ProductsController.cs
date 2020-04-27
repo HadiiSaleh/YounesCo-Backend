@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using YounesCo_Backend.Data;
 using YounesCo_Backend.Models;
+using YounesCo_Backend.ViewModels;
 
 namespace YounesCo_Backend.Controllers
 {
@@ -16,13 +19,15 @@ namespace YounesCo_Backend.Controllers
         #region Attributes
 
         private readonly ApplicationDbContext _db;
+        private readonly IMapper _mapper;
 
         #endregion
 
         #region Constructor
-        public ProductsController(ApplicationDbContext db)
+        public ProductsController(ApplicationDbContext db, IMapper mapper)
         {
             _db = db;
+            _mapper = mapper;
         }
 
         #endregion
@@ -31,45 +36,101 @@ namespace YounesCo_Backend.Controllers
 
         [HttpGet("[action]")]
         [Authorize(Policy = "RequireLoggedIn")]
-        public IActionResult GetProducts()
+        public async Task<IActionResult> GetProducts()
         {
-            var result = _db.Products
+            var result = await _db.Products
                 .Include(p => p.Colors)
                     .ThenInclude(c => c.Images)
-                .Where(p => p.OutOfStock == false)
-                .ToList()
+                    .Where(p=>p.Deleted == false)
+               // .Where(p => p.OutOfStock == false)
+                .ToListAsync()
                 ;
 
-            if (result.Count() <= 0) return NotFound(new JsonResult("No products existed."));
-
-            return Ok(result);
+            var products = _mapper.Map<List<ProductToListViewModel>>(result);
+            return Ok(products);
         }
 
         #endregion
 
         #region GetProductsByCategoryId
 
+        //[HttpGet("[action]/{categoryId}")]
+        //[Authorize(Policy = "RequireLoggedIn")]
+        //public async Task<IActionResult> GetProductsByCategoryId([FromRoute] int categoryId)
+        //{
+        //    var result = await _db.Products
+        //        .Include(p => p.Colors)
+        //            .ThenInclude(c => c.Images)
+        //       // .Where(p => p.OutOfStock == false && p.CategoryId == categoryId)
+        //        .ToListAsync()
+        //        ;
+
+        //    return Ok(result);
+        //}
+
+
         [HttpGet("[action]/{id}")]
         [Authorize(Policy = "RequireLoggedIn")]
-        public IActionResult GetProductsByCategoryId([FromRoute] int id)
+        public async Task<IActionResult> GetProductsByType([FromRoute] int id)
         {
-            var result = _db.Products
+            var products = await _db.Products
                 .Include(p => p.Colors)
-                    .ThenInclude(c => c.Images)
-                .Where(p => p.OutOfStock == false && p.CategoryId == id)
-                .ToList()
-                ;
+                .ThenInclude(c => c.Images)
+                .Include(p => p.Type)
+                .Where(p => p.TypeId == id)
+                .ToListAsync();
 
-            if (result.Count() <= 0) return NotFound(new JsonResult("No products of this category existed."));
+            return Ok(products);
+        }
 
-            return Ok(result);
+
+        [HttpPost("[action]")]
+        [Authorize(Policy = "RequireAdministratorRole")]
+        public async Task<ActionResult<Product>> AssigneProductToType([FromBody] AddProductsToTypeViewModel productsToTypeViewModel)
+        {
+            if(productsToTypeViewModel == null)
+            {
+                return BadRequest("Invalid Products");
+            }
+
+            var products = productsToTypeViewModel.ProductsIds;
+            var type = await _db.Types.FindAsync(productsToTypeViewModel.TypeId);
+
+            if(type == null)
+            {
+                return NotFound("Type not found");
+            }
+
+            for (int i = 0; i < products.Count; i++)
+            {
+                var product = await _db.Products
+                    .Include(p => p.Type)
+                    .FirstOrDefaultAsync(p => p.ProductId == products[i]);
+
+                if(product != null && !product.Deleted)
+                {
+                    if (product.Type == null)
+                    {
+                        product.TypeId = productsToTypeViewModel.TypeId;
+                        product.UpdatedAt = DateTime.Now;
+                    }
+                }
+                else
+                {
+                    return NotFound($"Product with id {products[i]} not found");
+                }
+            }
+
+            await _db.SaveChangesAsync();
+
+            return Ok($"Products Added to {type.TypeName}");
         }
 
         #endregion
 
         #region GetProductByIdAsync
 
-        [HttpGet("[action]/{id}")]
+        [HttpGet("[action]/{id}",Name ="GetProductById")]
         [Authorize(Policy = "RequireLoggedIn")]
         public async Task<ActionResult<Product>> GetProductById([FromRoute] int id)
         {
@@ -78,19 +139,21 @@ namespace YounesCo_Backend.Controllers
                 return BadRequest(ModelState);
             }
 
-            if (id <= 0) return BadRequest(new JsonResult("Invalid Id!"));
+            if (id <= 0) return BadRequest("Invalid Id!");
 
             var findProduct = await _db.Products
                 .Include(p => p.Colors)
                     .ThenInclude(c => c.Images)
+                    .Where(p => p.Deleted == false)
+                    .Where(p=> p.OutOfStock == false)
                 .SingleOrDefaultAsync(p => p.ProductId == id)
                 ;
+            if(findProduct == null)
+            {
+                return NotFound("Product cannot be found");
+            }
 
-            if (findProduct != null && findProduct.OutOfStock == false)
-                return Ok(new JsonResult(findProduct));
-
-            else
-                return NotFound(new JsonResult("Product Not Found"));
+            return Ok(findProduct);
         }
 
         #endregion
@@ -99,24 +162,22 @@ namespace YounesCo_Backend.Controllers
 
         [HttpPost("[action]")]
         [Authorize(Policy = "RequireAdministratorRole")]
-        public async Task<IActionResult> CreateProduct([FromBody] Product data)
+        public async Task<IActionResult> CreateProduct([FromBody] CreateProductViewModel data)
         {
-            var newproduct = new Product
-            {
-                Name = data.Name,
-                Description = data.Description,
-                OutOfStock = data.OutOfStock,
-                Quantity = data.Quantity,
-                Price = data.Price,
-                CategoryId = data.CategoryId
-            };
+            var productFromDb = await _db.Products.FirstOrDefaultAsync(p => p.Name.ToLower() == data.Name.ToLower());
 
-            await _db.Products.AddAsync(newproduct);
+            if(productFromDb != null)
+            {
+                return Conflict($"Product {productFromDb.Name} already exist");
+            }
+
+            var product = _mapper.Map<Product>(data);
+
+            await _db.Products.AddAsync(product);
 
             await _db.SaveChangesAsync();
 
-            return Created("", new JsonResult("Product Added Successfully"));
-
+            return CreatedAtRoute("GetProductById", new { controller = "Products", id= product.ProductId}, product);
         }
 
         #endregion
@@ -145,7 +206,7 @@ namespace YounesCo_Backend.Controllers
             findProduct.OutOfStock = data.OutOfStock;
             findProduct.Price = data.Price;
             findProduct.Quantity = data.Quantity;
-            findProduct.CategoryId = data.CategoryId;
+           // findProduct.CategoryId = data.CategoryId;
             findProduct.UpdatedAt = DateTime.Now;
 
             _db.Entry(findProduct).State = EntityState.Modified;
@@ -233,45 +294,45 @@ namespace YounesCo_Backend.Controllers
 
         #region DeleteProductsByCategoryIdAsync
 
-        [HttpPut("[action]/{id}")]
-        [Authorize(Policy = "RequireAdministratorRole")]
-        public async Task<IActionResult> DeleteProductsByCategoryId([FromRoute] int id)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+        //[HttpPut("[action]/{id}")]
+        //[Authorize(Policy = "RequireAdministratorRole")]
+        //public async Task<IActionResult> DeleteProductsByCategoryId([FromRoute] int id)
+        //{
+        //    if (!ModelState.IsValid)
+        //    {
+        //        return BadRequest(ModelState);
+        //    }
 
-            // find the product
+        //    // find the product
 
-            var result = _db.Products.ToList().Where(c => c.CategoryId == id).Where(c => c.OutOfStock == false);
+        //    var result = _db.Products.ToList().Where(c => c.CategoryId == id).Where(c => c.OutOfStock == false);
 
-            Category category = await _db.Categories.FindAsync(id);
+        //    Category category = await _db.Categories.FindAsync(id);
 
-            if (category == null)
-                return NotFound(new JsonResult("Invalid Category Id"));
+        //    if (category == null)
+        //        return NotFound(new JsonResult("Invalid Category Id"));
 
-            if (result.Count() <= 0)
-            {
-                return NotFound(new JsonResult("No Product in catgory " + category.CategoryName));
-            }
+        //    if (result.Count() <= 0)
+        //    {
+        //        return NotFound(new JsonResult("No Product in catgory " + category.CategoryName));
+        //    }
 
-            // If products was found
+        //    // If products was found
 
-            foreach (Product product in result)
-            {
-                product.OutOfStock = true;
-                product.UpdatedAt = DateTime.Now;
+        //    foreach (Product product in result)
+        //    {
+        //        product.OutOfStock = true;
+        //        product.UpdatedAt = DateTime.Now;
 
-                _db.Entry(product).State = EntityState.Modified;
-            }
+        //        _db.Entry(product).State = EntityState.Modified;
+        //    }
 
-            await _db.SaveChangesAsync();
+        //    await _db.SaveChangesAsync();
 
-            // Finally return the result to client
-            return Ok(new JsonResult("The Products of category" + category.CategoryName + " is now out of stock."));
+        //    // Finally return the result to client
+        //    return Ok(new JsonResult("The Products of category" + category.CategoryName + " is now out of stock."));
 
-        }
+        //}
 
         #endregion
     }

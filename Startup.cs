@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -51,6 +52,14 @@ namespace YounesCo_Backend
                 .AllowAnyMethod()
                 .AllowAnyHeader());
             });
+
+            //Auto Mapper configuration
+            var mappingConfig = new MapperConfiguration(mc =>
+            {
+                mc.AddProfile(new AutoMapperProfiles());
+            });
+            IMapper mapper = mappingConfig.CreateMapper();
+            services.AddSingleton(mapper);
 
             //Connect to DataBase
 

@@ -68,6 +68,7 @@ namespace YounesCo_Backend.Data
         public DbSet<Color> Colors { get; set; }
 
         public DbSet<Category> Categories { get; set; }
+        public DbSet<Type> Types { get; set; }
 
         public DbSet<Favorite> Favorites { get; set; }
 

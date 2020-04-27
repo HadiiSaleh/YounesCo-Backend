@@ -28,13 +28,21 @@ namespace YounesCo_Backend.Models
         [Range(0, 1000000000)]
         public double Price { get; set; }
 
-        [Required]
-        [Display(Name = "Category Id")]
-        [Range(0, 1000000000)]
-        public int CategoryId { get; set; }
+        /* [Required]
+         [Display(Name = "Category Id")]
+         [Range(0, 1000000000)]
+         public int CategoryId { get; set; }
 
-        [ForeignKey("CategoryId")]
-        public Category Category { get; set; }
+         [ForeignKey("CategoryId")]
+         public Category Category { get; set; }*/
+
+        [Display(Name = "Type Id")]
+        [Range(0, 1000000000)]
+        public int? TypeId { get; set; }
+
+        [ForeignKey("TypeId")]
+        public Type Type { get; set; }
+
 
         [Display(Name = "Created At")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
@@ -43,8 +51,15 @@ namespace YounesCo_Backend.Models
         public DateTime? UpdatedAt { get; set; }
 
         [Required]
+        public bool Deleted { get; set; } = false;
+
+        [Required]
         [Display(Name = "Out Of Stock")]
-        public bool OutOfStock { get; set; }
+        public bool OutOfStock
+        {
+            get { return Quantity < 5; }
+            set { }
+        }
 
         public List<Color> Colors { get; set; }
 

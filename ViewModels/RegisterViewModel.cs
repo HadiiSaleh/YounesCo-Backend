@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using YounesCo_Backend.Models;
 
-namespace YounesCo_Backend.Models
+namespace YounesCo_Backend.ViewModels
 {
     public class RegisterViewModel
     {

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace YounesCo_Backend.Models
+namespace YounesCo_Backend.ViewModels
 {
     public class ResetPasswordViewModel
     {

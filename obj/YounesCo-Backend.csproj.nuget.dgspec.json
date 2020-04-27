@@ -1,29 +1,28 @@
 {
   "format": 1,
   "restore": {
-    "D:\\hadi\\YounesCo\\YounesCo-Backend\\YounesCo-Backend.csproj": {}
+    "C:\\Users\\Admin\\Source\\Repos\\YounesCo-Backend\\YounesCo-Backend.csproj": {}
   },
   "projects": {
-    "D:\\hadi\\YounesCo\\YounesCo-Backend\\YounesCo-Backend.csproj": {
+    "C:\\Users\\Admin\\Source\\Repos\\YounesCo-Backend\\YounesCo-Backend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\hadi\\YounesCo\\YounesCo-Backend\\YounesCo-Backend.csproj",
+        "projectUniqueName": "C:\\Users\\Admin\\Source\\Repos\\YounesCo-Backend\\YounesCo-Backend.csproj",
         "projectName": "YounesCo-Backend",
-        "projectPath": "D:\\hadi\\YounesCo\\YounesCo-Backend\\YounesCo-Backend.csproj",
-        "packagesPath": "C:\\Users\\Hadi\\.nuget\\packages\\",
-        "outputPath": "D:\\hadi\\YounesCo\\YounesCo-Backend\\obj\\",
+        "projectPath": "C:\\Users\\Admin\\Source\\Repos\\YounesCo-Backend\\YounesCo-Backend.csproj",
+        "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Admin\\Source\\Repos\\YounesCo-Backend\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
-        ],
         "configFilePaths": [
-          "C:\\Users\\Hadi\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\DevExpress 19.2.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "netcoreapp3.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\DevExpress 19.2\\Components\\System\\Components\\Packages": {},
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
@@ -41,6 +40,10 @@
       "frameworks": {
         "netcoreapp3.0": {
           "dependencies": {
+            "AutoMapper": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
               "version": "[3.0.0, )"
@@ -136,7 +139,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.1.200\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.1.201\\RuntimeIdentifierGraph.json"
         }
       }
     }
