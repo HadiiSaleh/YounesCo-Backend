@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using YounesCo_Backend.Data;
 using YounesCo_Backend.Models;
+using YounesCo_Backend.ViewModels;
 
 namespace YounesCo_Backend.Controllers
 {
@@ -16,13 +18,15 @@ namespace YounesCo_Backend.Controllers
         #region Attributes
 
         private readonly ApplicationDbContext _db;
+        private readonly IMapper _mapper;
 
         #endregion
 
         #region Constructor
-        public ColorsController(ApplicationDbContext db)
+        public ColorsController(ApplicationDbContext db, IMapper mapper)
         {
             _db = db;
+            _mapper = mapper;
         }
 
         #endregion
@@ -63,7 +67,7 @@ namespace YounesCo_Backend.Controllers
                 return NotFound();
             }
 
-            return Ok(new JsonResult(color));
+            return Ok(color);
         }
 
         #endregion
@@ -89,26 +93,27 @@ namespace YounesCo_Backend.Controllers
 
         [HttpPost("[action]")]
         [Authorize(Policy = "RequireAdministratorRole")]
-        public async Task<IActionResult> CreateColor([FromBody] Color data)
+        public async Task<IActionResult> CreateColor([FromBody] ColorForCreationViewModel data)
         {
-            var newcolor = new Color
+            var colorFromDb = await _db.Colors
+                .FirstOrDefaultAsync(c => c.ColorName.ToLower() == data.ColorName.ToLower());
+            
+            if(colorFromDb != null)
             {
-                ColorName = data.ColorName,
-                ColorCode = data.ColorCode,
-                Deleted = false,
-                Default = data.Default,
-                ProductId = data.ProductId
-            };
+                return BadRequest($"Color {colorFromDb.ColorName} already exist");
+            }
+            var colorToSave = _mapper.Map<Color>(data);
 
-            await _db.Colors.AddAsync(newcolor);
+             await _db.Colors.AddAsync(colorToSave);
 
             await _db.SaveChangesAsync();
 
-            return Created("", new JsonResult("The Color was Added Successfully"));
+            return StatusCode(201 ,"The Color was Added Successfully");
 
         }
 
         #endregion
+
 
         #region UpdateColorAsync
 

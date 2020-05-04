@@ -27,4 +27,10 @@
     <PackageReference Include="System.Collections.NonGeneric" Version="4.3.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+    <Folder Include="Resources\" />
+    <Folder Include="wwwroot\Resources\" />
+  </ItemGroup>
+
 </Project>

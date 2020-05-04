@@ -24,7 +24,7 @@ namespace YounesCo_Backend.Models
         [Required]
         public bool Deleted { get; set; } = false;
 
-     //   public List<Product> Products { get; set; }
-        public List<Type> Types { get; set; }
+       public List<Product> Products { get; set; }
+       // public List<Type> Types { get; set; }
     }
 }

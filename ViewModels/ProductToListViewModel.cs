@@ -14,12 +14,11 @@ namespace YounesCo_Backend.ViewModels
         public int Quantity { get; set; }
         public double Price { get; set; }
 
-        [Required]
         [Display(Name = "Out Of Stock")]
-        public bool OutOfStock
-        {
-            get { return Quantity < 5; }
-            set { }
-        }
+        public bool OutOfStock{ get; set; }
+        public bool Deleted { get; set; }
+
+        public string ImageUrl { get; set; }
+        public string DefaultColor { get; set; }
     }
 }

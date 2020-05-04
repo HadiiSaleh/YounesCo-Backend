@@ -17,7 +17,7 @@ namespace YounesCo_Backend.Models
         public string Name { get; set; }
 
         [Required]
-        [StringLength(450, ErrorMessage = "Maximum length for product description is {1}")]
+        //[StringLength(450, ErrorMessage = "Maximum length for product description is {1}")]
         public string Description { get; set; }
 
         [Required]
@@ -28,20 +28,19 @@ namespace YounesCo_Backend.Models
         [Range(0, 1000000000)]
         public double Price { get; set; }
 
-        /* [Required]
-         [Display(Name = "Category Id")]
-         [Range(0, 1000000000)]
-         public int CategoryId { get; set; }
-
-         [ForeignKey("CategoryId")]
-         public Category Category { get; set; }*/
-
-        [Display(Name = "Type Id")]
+        [Display(Name = "Category Id")]
         [Range(0, 1000000000)]
-        public int? TypeId { get; set; }
+        public int? CategoryId { get; set; }
 
-        [ForeignKey("TypeId")]
-        public Type Type { get; set; }
+        [ForeignKey("CategoryId")]
+        public Category Category { get; set; }
+
+        //[Display(Name = "Type Id")]
+        //[Range(0, 1000000000)]
+        //public int? TypeId { get; set; }
+
+        //[ForeignKey("TypeId")]
+        //public Type Type { get; set; }
 
 
         [Display(Name = "Created At")]
@@ -57,7 +56,7 @@ namespace YounesCo_Backend.Models
         [Display(Name = "Out Of Stock")]
         public bool OutOfStock
         {
-            get { return Quantity < 5; }
+            get { return Quantity < 2; }
             set { }
         }
 

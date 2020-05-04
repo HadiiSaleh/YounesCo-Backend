@@ -23,7 +23,26 @@ namespace YounesCo_Backend.Helpers
 
 
             CreateMap<CreateProductViewModel, Product > ();
-            CreateMap<Product, ProductToListViewModel> ();
+            CreateMap<Product, ProductDetailsViewModel>();
+
+
+            CreateMap<Product, ProductToListViewModel>().ForMember(dest => dest.DefaultColor, opt =>
+            {
+                opt.MapFrom(src => src.Colors.FirstOrDefault(c => c.Default).ColorName);
+            }).ForMember(dest => dest.ImageUrl, opt => {
+                opt.MapFrom(src => src
+                .Colors
+                .FirstOrDefault(c => c.Default)
+                .Images
+                .FirstOrDefault(i=>i.Default)
+                .ImageSource
+                );
+            });
+
+
+
+            CreateMap<ImageForCreationViewModel, Image>();
+            CreateMap<ColorForCreationViewModel, Color>();
 
         }
     }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
+using YounesCo_Backend.Models;
 
 namespace YounesCo_Backend.ViewModels
 {
@@ -22,5 +23,7 @@ namespace YounesCo_Backend.ViewModels
         [Required]
         [Range(0, 1000000000)]
         public double Price { get; set; }
+
+        public double ColorId { get; set; }
     }
 }

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace YounesCo_Backend.Data
 {
@@ -36,10 +37,10 @@ namespace YounesCo_Backend.Data
 
     public static class Pagination
     {
-        public static async System.Threading.Tasks.Task<PagedResult<T>> GetPagedAsync<T>(this IQueryable<T> query, int page, int pageSize) where T : class
+        public static async Task<PagedResult<T>> GetPagedAsync<T>(this IQueryable<T> query, int pageNumber, int pageSize) where T : class
         {
             var result = new PagedResult<T>();
-            result.CurrentPage = page;
+            result.CurrentPage = pageNumber;
             result.PageSize = pageSize;
             result.RowCount = query.Count();
 
@@ -47,7 +48,7 @@ namespace YounesCo_Backend.Data
             var pageCount = (double)result.RowCount / pageSize;
             result.PageCount = (int)Math.Ceiling(pageCount);
 
-            var skip = (page - 1) * pageSize;
+            var skip = (pageNumber - 1) * pageSize;
             result.Results = await query.Skip(skip).Take(pageSize).ToListAsync();
 
             return result;

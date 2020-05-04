@@ -11,10 +11,10 @@ namespace YounesCo_Backend.Models
         [Display(Name = "Color Id")]
         public int ColorId { get; set; }
 
-        [Required]
+      //  [Required]
         [Range(0, 1000000000)]
         [Display(Name = "Product Id")]
-        public int ProductId { get; set; }
+        public int? ProductId { get; set; }
 
         [ForeignKey("ProductId")]
         public Product Product { get; set; }
@@ -39,7 +39,7 @@ namespace YounesCo_Backend.Models
         public DateTime? UpdatedAt { get; set; }
 
         [Required]
-        public bool Deleted { get; set; }
+        public bool Deleted { get; set; } = false;
 
         public List<Image> Images { get; set; }
 

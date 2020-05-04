@@ -10,10 +10,10 @@ namespace YounesCo_Backend.Models
         [Display(Name = "Image Id")]
         public int ImageId { get; set; }
 
-        [Required]
+        // [Required]
         [Display(Name = "Color Id")]
         [Range(0, 1000000000)]
-        public int ColorId { get; set; }
+        public int? ColorId { get; set; }
 
         [ForeignKey("ColorId")]
         public Color Color { get; set; }

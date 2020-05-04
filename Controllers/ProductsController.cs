@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using YounesCo_Backend.Data;
+using YounesCo_Backend.Helpers;
 using YounesCo_Backend.Models;
 using YounesCo_Backend.ViewModels;
 
@@ -36,97 +37,64 @@ namespace YounesCo_Backend.Controllers
 
         [HttpGet("[action]")]
         [Authorize(Policy = "RequireLoggedIn")]
-        public async Task<IActionResult> GetProducts()
+        public async Task<IActionResult> GetProducts([FromQuery] ProductsParams productsParams)
         {
-            var result = await _db.Products
+            var products = _db.Products
                 .Include(p => p.Colors)
                     .ThenInclude(c => c.Images)
                     .Where(p=>p.Deleted == false)
-               // .Where(p => p.OutOfStock == false)
-                .ToListAsync()
-                ;
+                .AsQueryable();
 
-            var products = _mapper.Map<List<ProductToListViewModel>>(result);
-            return Ok(products);
+            if(productsParams.CategoryId > 0)
+            {
+                products = products.Where(p => p.CategoryId == productsParams.CategoryId);
+            }
+            //need to change the condition to set MaxPrice > MaxPrice Exist in DB
+            if (productsParams.MinPrice > 0) 
+            {
+                products = products.Where(p => p.Price >= productsParams.MinPrice);
+            }
+            if(productsParams.MaxPrice < 100000)
+            {
+                products = products.Where(p => p.Price <= productsParams.MaxPrice);
+            }
+
+            if(!string.IsNullOrEmpty(productsParams.Search))
+            {
+                products = products.Where(p => p.Name.Contains(productsParams.Search));
+            }
+
+            if (!string.IsNullOrEmpty(productsParams.OrderByPrice))
+            {
+                products = productsParams.OrderByPrice == "asc" ? products.OrderBy(p => p.Price) : products.OrderByDescending(p => p.Price);
+            }
+            var result = await Pagination.GetPagedAsync(products, productsParams.PageNumber, productsParams.PageSize);
+
+            Response.AddPagination(result.CurrentPage, result.PageSize, result.RowCount, result.PageCount);
+            var productsToReturn = _mapper.Map<List<ProductToListViewModel>>(result.Results);
+
+            return Ok(productsToReturn);
         }
 
         #endregion
 
         #region GetProductsByCategoryId
 
-        //[HttpGet("[action]/{categoryId}")]
-        //[Authorize(Policy = "RequireLoggedIn")]
-        //public async Task<IActionResult> GetProductsByCategoryId([FromRoute] int categoryId)
-        //{
-        //    var result = await _db.Products
-        //        .Include(p => p.Colors)
-        //            .ThenInclude(c => c.Images)
-        //       // .Where(p => p.OutOfStock == false && p.CategoryId == categoryId)
-        //        .ToListAsync()
-        //        ;
-
-        //    return Ok(result);
-        //}
-
-
-        [HttpGet("[action]/{id}")]
+        [HttpGet("[action]/{categoryId}")]
         [Authorize(Policy = "RequireLoggedIn")]
-        public async Task<IActionResult> GetProductsByType([FromRoute] int id)
+        public async Task<IActionResult> GetProductsByCategoryId([FromRoute] int categoryId)
         {
-            var products = await _db.Products
+            var result = await _db.Products
                 .Include(p => p.Colors)
-                .ThenInclude(c => c.Images)
-                .Include(p => p.Type)
-                .Where(p => p.TypeId == id)
+                    .ThenInclude(c => c.Images)
+                .Where(p => p.CategoryId == categoryId)
                 .ToListAsync();
 
-            return Ok(products);
-        }
-
-
-        [HttpPost("[action]")]
-        [Authorize(Policy = "RequireAdministratorRole")]
-        public async Task<ActionResult<Product>> AssigneProductToType([FromBody] AddProductsToTypeViewModel productsToTypeViewModel)
-        {
-            if(productsToTypeViewModel == null)
-            {
-                return BadRequest("Invalid Products");
-            }
-
-            var products = productsToTypeViewModel.ProductsIds;
-            var type = await _db.Types.FindAsync(productsToTypeViewModel.TypeId);
-
-            if(type == null)
-            {
-                return NotFound("Type not found");
-            }
-
-            for (int i = 0; i < products.Count; i++)
-            {
-                var product = await _db.Products
-                    .Include(p => p.Type)
-                    .FirstOrDefaultAsync(p => p.ProductId == products[i]);
-
-                if(product != null && !product.Deleted)
-                {
-                    if (product.Type == null)
-                    {
-                        product.TypeId = productsToTypeViewModel.TypeId;
-                        product.UpdatedAt = DateTime.Now;
-                    }
-                }
-                else
-                {
-                    return NotFound($"Product with id {products[i]} not found");
-                }
-            }
-
-            await _db.SaveChangesAsync();
-
-            return Ok($"Products Added to {type.TypeName}");
+            return Ok(result);
         }
 
         #endregion
+
 
         #region GetProductByIdAsync
 
@@ -134,10 +102,6 @@ namespace YounesCo_Backend.Controllers
         [Authorize(Policy = "RequireLoggedIn")]
         public async Task<ActionResult<Product>> GetProductById([FromRoute] int id)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
 
             if (id <= 0) return BadRequest("Invalid Id!");
 
@@ -152,8 +116,8 @@ namespace YounesCo_Backend.Controllers
             {
                 return NotFound("Product cannot be found");
             }
-
-            return Ok(findProduct);
+            var productToReturn = _mapper.Map<ProductDetailsViewModel>(findProduct);
+            return Ok(productToReturn);
         }
 
         #endregion
@@ -172,6 +136,24 @@ namespace YounesCo_Backend.Controllers
             }
 
             var product = _mapper.Map<Product>(data);
+
+            var color = await _db.Colors
+                .FirstOrDefaultAsync(c => c.ColorId == data.ColorId && !c.Deleted);
+
+            if(color == null)
+            {
+                return BadRequest("Cannot find color");
+            }
+
+            color.Product = product;
+            //product.Colors.Add(new Color()
+            //{
+            //    ColorName = data.ColorName,
+            //    ColorCode = data.ColorName,
+            //    Default = true,
+            //    Deleted = false,
+            //}
+            //);
 
             await _db.Products.AddAsync(product);
 
@@ -260,10 +242,10 @@ namespace YounesCo_Backend.Controllers
         [Authorize(Policy = "RequireAdministratorRole")]
         public async Task<IActionResult> UnDeleteProduct([FromRoute] int id)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            //if (!ModelState.IsValid)
+            //{
+            //    return BadRequest(ModelState);
+            //}
 
             // find the product
 
@@ -271,11 +253,11 @@ namespace YounesCo_Backend.Controllers
 
             if (findProduct == null)
             {
-                return NotFound(new JsonResult("Product not found"));
+                return NotFound("Product not found");
             }
 
             if (findProduct.OutOfStock == false)
-                return NotFound(new JsonResult("Product already in stock"));
+                return NotFound("Product already in stock");
 
             // If the product was found
             findProduct.OutOfStock = false;
