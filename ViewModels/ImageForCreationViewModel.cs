@@ -10,7 +10,11 @@ namespace YounesCo_Backend.ViewModels
     {
 
         public string ImageSource { get; set; }
-        public IFormFile File { get; set; }
+        public bool Default { get; set; }
+        public List<IFormFile> files { get; set; }
+
+        public int productId { get; set; }
+        public int colorId { get; set; }
 
     }
 }

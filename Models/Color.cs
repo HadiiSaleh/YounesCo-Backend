@@ -12,12 +12,14 @@ namespace YounesCo_Backend.Models
         public int ColorId { get; set; }
 
       //  [Required]
-        [Range(0, 1000000000)]
-        [Display(Name = "Product Id")]
-        public int? ProductId { get; set; }
+       // [Range(0, 1000000000)]
+       // [Display(Name = "Product Id")]
+       // public int? ProductId { get; set; }
 
-        [ForeignKey("ProductId")]
-        public Product Product { get; set; }
+       // [ForeignKey("ProductId")]
+      //  public Product Product { get; set; }
+
+        public List<Product> Products { get; set; }
 
         [Required]
         [Display(Name = "Color Name")]
@@ -41,8 +43,8 @@ namespace YounesCo_Backend.Models
         [Required]
         public bool Deleted { get; set; } = false;
 
-        public List<Image> Images { get; set; }
+       // public List<Image> Images { get; set; }
 
-        public List<OrderItem> OrderItems { get; set; }
+       // public List<OrderItem> OrderItems { get; set; }
     }
 }

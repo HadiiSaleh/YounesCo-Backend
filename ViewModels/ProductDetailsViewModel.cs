@@ -30,13 +30,17 @@ namespace YounesCo_Backend.ViewModels
 
         public bool Deleted { get; set; } = false;
 
+        public string Features { get; set; }
+
         public bool OutOfStock
         {
             get { return Quantity < 2; }
             set { }
         }
 
-        public List<Color> Colors { get; set; }
+        public ColorsForListViewModel Color { get; set; }
+        public List<ImageForListViewModel> Images { get; set; }
+
 
 
     }

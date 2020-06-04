@@ -3,15 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using YounesCo_Backend.Data;
 
 namespace YounesCo_Backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20200514091018_AddListOfProductsToColorsTable")]
+    partial class AddListOfProductsToColorsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -386,19 +388,10 @@ namespace YounesCo_Backend.Migrations
                     b.Property<bool>("Default")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("Deleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("ImageName")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("ImageSource")
                         .IsRequired()
                         .HasColumnType("nvarchar(1000)")
                         .HasMaxLength(1000);
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -406,8 +399,6 @@ namespace YounesCo_Backend.Migrations
                     b.HasKey("ImageId");
 
                     b.HasIndex("ColorId");
-
-                    b.HasIndex("ProductId");
 
                     b.ToTable("Images");
                 });
@@ -551,9 +542,6 @@ namespace YounesCo_Backend.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Features")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
@@ -703,14 +691,8 @@ namespace YounesCo_Backend.Migrations
             modelBuilder.Entity("YounesCo_Backend.Models.Image", b =>
                 {
                     b.HasOne("YounesCo_Backend.Models.Color", "Color")
-                        .WithMany()
-                        .HasForeignKey("ColorId");
-
-                    b.HasOne("YounesCo_Backend.Models.Product", "Product")
                         .WithMany("Images")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ColorId");
                 });
 
             modelBuilder.Entity("YounesCo_Backend.Models.Invoice", b =>
@@ -738,9 +720,9 @@ namespace YounesCo_Backend.Migrations
             modelBuilder.Entity("YounesCo_Backend.Models.OrderItem", b =>
                 {
                     b.HasOne("YounesCo_Backend.Models.Color", "Color")
-                        .WithMany()
+                        .WithMany("OrderItems")
                         .HasForeignKey("ColorId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("YounesCo_Backend.Models.Order", "Order")

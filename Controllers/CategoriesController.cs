@@ -400,5 +400,23 @@ namespace YounesCo_Backend.Controllers
         #endregion
 
 
-    }
+        #region GetColorsAndCategoriesNames
+
+        [HttpGet("[action]")]
+        [Authorize(Policy = "RequireLoggedIn")]
+        public async Task<IActionResult> GetColorsAndCategoriesNames()
+        {
+            var colorsFromDb = await _db.Colors.Where(c => c.Deleted == false && c.Products.Any(p => !p.Deleted)).ToListAsync();
+            var categoriesFromDb = await _db.Categories.Where(c => c.Deleted == false && c.Products.Any(p => !p.Deleted)).ToListAsync();
+
+            var colors = _mapper.Map<List<ColorsForDetailsViewModel>>(colorsFromDb);
+
+            var categories = _mapper.Map<List<CategoryDetailsViewModel>>(categoriesFromDb);
+
+            return Ok(new { categories,  colors });
+        }
+        #endregion
+
+
+        }
 }

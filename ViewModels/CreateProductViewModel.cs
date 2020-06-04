@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -14,9 +15,9 @@ namespace YounesCo_Backend.ViewModels
         public string Name { get; set; }
 
         [Required]
-        [StringLength(450, ErrorMessage = "Maximum length for product description is {1}")]
         public string Description { get; set; }
 
+        [Required]
         [Range(0, 1000000000)]
         public int Quantity { get; set; }
 
@@ -24,6 +25,12 @@ namespace YounesCo_Backend.ViewModels
         [Range(0, 1000000000)]
         public double Price { get; set; }
 
-        public double ColorId { get; set; }
+        [Required]
+        public string ColorName { get; set; }
+
+        [Required]
+        public string CategoryName { get; set; }
+        public bool OutOfStock { get; set; } = true;
+        public string Features { get; set; }
     }
 }

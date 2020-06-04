@@ -35,6 +35,9 @@ namespace YounesCo_Backend.Models
         [ForeignKey("CategoryId")]
         public Category Category { get; set; }
 
+        public string Features { get; set; }
+
+
         //[Display(Name = "Type Id")]
         //[Range(0, 1000000000)]
         //public int? TypeId { get; set; }
@@ -60,7 +63,16 @@ namespace YounesCo_Backend.Models
             set { }
         }
 
-        public List<Color> Colors { get; set; }
+        //public List<Color> Colors { get; set; }
+
+        
+
+        public int? ColorId { get; set; }
+
+        [ForeignKey("ColorId")]
+        public Color Color { get; set; }
+
+        public List<Image> Images { get; set; }
 
         public List<OrderItem> OrderItems { get; set; }
 

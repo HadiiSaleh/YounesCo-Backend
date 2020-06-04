@@ -51,7 +51,7 @@ namespace YounesCo_Backend.Services
             {
                 favorite.Product.Favorites = null;
                 favorite.Product.OrderItems = null;
-                favorite.Product.Colors = null;
+                favorite.Product.Color = null;
                 products.Add(favorite.Product);
             }
 

@@ -44,7 +44,7 @@ namespace YounesCo_Backend.Data
             builder.Entity<OrderItem>(i =>
             {
                 i.HasOne(o => o.Product).WithMany(p => p.OrderItems).OnDelete(DeleteBehavior.Restrict);
-                i.HasOne(o => o.Color).WithMany(p => p.OrderItems).OnDelete(DeleteBehavior.Restrict);
+               // i.HasOne(o => o.Color).WithMany(p => p.OrderItems).OnDelete(DeleteBehavior.Restrict);
                 i.Property(o => o.ColorName).HasColumnName("Color");
             });
 

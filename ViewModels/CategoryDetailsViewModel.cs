@@ -15,7 +15,7 @@ namespace YounesCo_Backend.ViewModels
         [Display(Name = "Category Name")]
         public string CategoryName { get; set; }
 
-        public List<TypesForListViewModel> Types { get; set; }
+        // public List<TypesForListViewModel> Types { get; set; }
 
         [Display(Name = "Created At")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;

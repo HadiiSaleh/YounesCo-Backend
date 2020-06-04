@@ -40,26 +40,39 @@ namespace YounesCo_Backend.Controllers
         public async Task<IActionResult> GetProducts([FromQuery] ProductsParams productsParams)
         {
             var products = _db.Products
-                .Include(p => p.Colors)
-                    .ThenInclude(c => c.Images)
+                .Include(p => p.Color)
+                .Include(p=>p.Images)
                     .Where(p=>p.Deleted == false)
                 .AsQueryable();
 
-            if(productsParams.CategoryId > 0)
+            if (!string.IsNullOrEmpty(productsParams.CategoriesId))
             {
-                products = products.Where(p => p.CategoryId == productsParams.CategoryId);
+                string[] categoriesId = productsParams.CategoriesId.Split(',');
+
+                products = products.Where(c => categoriesId.ToList().Contains(c.CategoryId.ToString()));
+
             }
-            //need to change the condition to set MaxPrice > MaxPrice Exist in DB
+
             if (productsParams.MinPrice > 0) 
             {
                 products = products.Where(p => p.Price >= productsParams.MinPrice);
             }
+
+            //need to change the condition to set MaxPrice > MaxPrice Exist in DB
             if(productsParams.MaxPrice < 100000)
             {
                 products = products.Where(p => p.Price <= productsParams.MaxPrice);
             }
 
-            if(!string.IsNullOrEmpty(productsParams.Search))
+            if (!string.IsNullOrEmpty(productsParams.ColorsId))
+            {
+                string[] colorsIds = productsParams.ColorsId.Split(',');
+
+                products = products.Where(c => colorsIds.ToList().Contains(c.ColorId.ToString()));
+
+            }
+
+                if (!string.IsNullOrEmpty(productsParams.Search))
             {
                 products = products.Where(p => p.Name.Contains(productsParams.Search));
             }
@@ -85,8 +98,8 @@ namespace YounesCo_Backend.Controllers
         public async Task<IActionResult> GetProductsByCategoryId([FromRoute] int categoryId)
         {
             var result = await _db.Products
-                .Include(p => p.Colors)
-                    .ThenInclude(c => c.Images)
+                .Include(p => p.Color)
+                .Include(p => p.Images)
                 .Where(p => p.CategoryId == categoryId)
                 .ToListAsync();
 
@@ -106,10 +119,9 @@ namespace YounesCo_Backend.Controllers
             if (id <= 0) return BadRequest("Invalid Id!");
 
             var findProduct = await _db.Products
-                .Include(p => p.Colors)
-                    .ThenInclude(c => c.Images)
+                .Include(p => p.Color)
+                .Include(p => p.Images)
                     .Where(p => p.Deleted == false)
-                    .Where(p=> p.OutOfStock == false)
                 .SingleOrDefaultAsync(p => p.ProductId == id)
                 ;
             if(findProduct == null)
@@ -137,15 +149,36 @@ namespace YounesCo_Backend.Controllers
 
             var product = _mapper.Map<Product>(data);
 
+
+            var category = await _db.Categories.FirstOrDefaultAsync(category => category.CategoryName == data.CategoryName && !category.Deleted);
+
+            if (category == null)
+            {
+                category = new Category()
+                {
+                    CategoryName = data.CategoryName
+                };
+                await _db.AddAsync(category);
+            }
+
+            product.Category = category;
+
             var color = await _db.Colors
-                .FirstOrDefaultAsync(c => c.ColorId == data.ColorId && !c.Deleted);
+                    .FirstOrDefaultAsync(c => (c.ColorName.ToLower() == data.ColorName.ToLower()) && !c.Deleted);
+
 
             if(color == null)
             {
-                return BadRequest("Cannot find color");
+                color = new Color()
+                {
+                    ColorName = data.ColorName,
+                    ColorCode = data.ColorName.ToUpper(),
+                    Default = true
+                };
+                await _db.AddAsync(color);
             }
 
-            color.Product = product;
+             product.Color = color;
             //product.Colors.Add(new Color()
             //{
             //    ColorName = data.ColorName,
@@ -203,7 +236,7 @@ namespace YounesCo_Backend.Controllers
 
         #region DeleteProductAsync
 
-        [HttpPut("[action]/{id}")]
+        [HttpDelete("[action]/{id}")]
         [Authorize(Policy = "RequireAdministratorRole")]
         public async Task<IActionResult> DeleteProduct([FromRoute] int id)
         {
@@ -216,21 +249,23 @@ namespace YounesCo_Backend.Controllers
 
             var findProduct = await _db.Products.FindAsync(id);
 
-            if (findProduct == null || findProduct.OutOfStock)
+            if (findProduct == null)
             {
-                return NotFound(new JsonResult("Product not found"));
+                return NotFound("Product not found");
             }
 
             // If the product was found
             findProduct.OutOfStock = true;
+            findProduct.Deleted = true;
             findProduct.UpdatedAt = DateTime.Now;
 
             _db.Entry(findProduct).State = EntityState.Modified;
 
-            await _db.SaveChangesAsync();
+           await _db.SaveChangesAsync();
+
 
             // Finally return the result to client
-            return Ok(new JsonResult("The Product with id " + id + " is now out of stock."));
+            return NoContent();
 
         }
 

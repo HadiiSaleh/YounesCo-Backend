@@ -18,10 +18,26 @@ namespace YounesCo_Backend.Models
         [ForeignKey("ColorId")]
         public Color Color { get; set; }
 
+        public int ProductId { get; set; }
+
+        [ForeignKey("ProductId")]
+        public Product Product { get; set; }
+
+        public string ImageName { get; set; }
+
         [Required]
         [Display(Name = "Image Source")]
         [StringLength(1000, ErrorMessage = "Maximum length for image source is {1}")]
-        public string ImageSource { get; set; }
+        public string ImageSource { get ; set; }
+
+        private string ImageBaseUrl = "https://localhost:44364/";
+
+        [NotMapped]
+        public string ImageUrl
+        {
+            get { return ImageBaseUrl = "https://localhost:44364/" + ImageSource; }
+        }
+
 
         [Required]
         public bool Default { get; set; }
@@ -31,5 +47,7 @@ namespace YounesCo_Backend.Models
 
         [Display(Name = "Updated At")]
         public DateTime? UpdatedAt { get; set; }
+
+        public bool Deleted { get; set; } = false;
     }
 }

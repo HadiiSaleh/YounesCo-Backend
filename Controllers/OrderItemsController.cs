@@ -89,7 +89,6 @@ namespace YounesCo_Backend.Controllers
             var items = await _db.OrderItems
                 .Include(item => item.Product)
                 .Include(item => item.Color)
-                    .ThenInclude(color => color.Images)
                 .Where(item => item.OrderId == id)
                 .ToListAsync()
                 ;
@@ -121,7 +120,6 @@ namespace YounesCo_Backend.Controllers
                 .Include(item => item.Order)
                     .ThenInclude(order => order.Customer)
                 .Include(item => item.Color)
-                    .ThenInclude(color => color.Images)
                 .Where(item => item.ProductId == id)
                 .ToListAsync()
                 ;

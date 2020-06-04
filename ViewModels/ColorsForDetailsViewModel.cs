@@ -1,22 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace YounesCo_Backend.ViewModels
 {
-    public class ColorForCreationViewModel
+    public class ColorsForDetailsViewModel
     {
-        [Required]
+        public int ColorId { get; set; }
+
         public string ColorName { get; set; }
 
-        [Required]
         public string ColorCode { get; set; }
 
-        [Required]
         public bool Default { get; set; }
 
         public bool Deleted { get; set; } = false;
+
     }
 }

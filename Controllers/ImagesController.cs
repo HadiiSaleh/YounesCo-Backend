@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http.Headers;
@@ -6,6 +7,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using YounesCo_Backend.Data;
@@ -96,13 +98,14 @@ namespace YounesCo_Backend.Controllers
 
         #region CreateImageAsync
 
-        [HttpPost("[action]/{productId}/color/{colorId}")]
+        [HttpPost("[action]")]
         [Authorize(Policy = "RequireAdministratorRole")]
-        public async Task<IActionResult> CreateImage(int productId, int colorId, [FromForm] ImageForCreationViewModel image)
+        public async Task<IActionResult> UploadProductImages([FromForm] ImageForCreationViewModel images)
         {
             var product = await _db.Products
-                .Include(p => p.Colors).ThenInclude(c => c.Images)
-                .FirstOrDefaultAsync(p => p.ProductId == productId);
+                .Include(p => p.Color)
+                .Include(p => p.Images)
+                .FirstOrDefaultAsync(p => p.ProductId == images.productId);
 
             if (product == null)
             {
@@ -110,8 +113,7 @@ namespace YounesCo_Backend.Controllers
             }
 
             var color = await _db.Colors
-                .Include(c => c.Images)
-                .FirstOrDefaultAsync(c => c.ColorId == colorId);
+                .FirstOrDefaultAsync(c => c.ColorId == images.colorId);
 
 
             if (color == null)
@@ -119,73 +121,87 @@ namespace YounesCo_Backend.Controllers
                 return BadRequest("Color cannot be found");
             }
 
-
-            var file = image.File;
-            var folderName = Path.Combine("Resources", "Products", "Images");
-
-            try
+            if (images.files != null && images.files.Count > 0)
             {
-                if (file.Length > 0)
+                for (int i = 0; i < images.files.Count; i++)
                 {
-                    var pathToSave = Path.Combine(_env.WebRootPath, folderName);
-                    if (!Directory.Exists(pathToSave))
+
+                    var file = images.files[i];
+                    var folderName = Path.Combine("Resources", "Products", "Images");
+
+                    try
                     {
-                        Directory.CreateDirectory(pathToSave);
-                    }
-                    var fileName = ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName.Trim('"');
-                    var dbPath = Path.Combine(folderName, fileName);
-
-                    var imageUrl = await _db.Images.FirstOrDefaultAsync(i => i.ImageSource.ToLower() == dbPath.ToLower());
-
-                    if(imageUrl != null)
-                    {
-                        return Conflict("Image name already exist");
-                    }
-
-                    var fileExtention = Path.GetExtension(dbPath);
-
-                    if (fileExtention.ToLower() == ".jpg" || fileExtention.ToLower() == ".png" || fileExtention.ToLower() == ".jpeg")
-                    {
-
-                        using (FileStream fileStream = System.IO.File.Create(pathToSave + "\\" + fileName))
+                        if (file.Length > 0)
                         {
-                            await file.CopyToAsync(fileStream);
-                            fileStream.Flush();
-                            image.ImageSource = dbPath;
-                            var imageToSave = _mapper.Map<Image>(image);
-
-                            imageToSave.ColorId = color.ColorId;
-
-                            if(!color.Images.Any(c => c.Default))
+                            var pathToSave = Path.Combine(_env.WebRootPath, folderName);
+                            if (!Directory.Exists(pathToSave))
                             {
-                                imageToSave.Default = true;
+                                Directory.CreateDirectory(pathToSave);
                             }
+                            var fileName = ContentDispositionHeaderValue.Parse(file.ContentDisposition).FileName.Trim('"');
+                            var dbPath = Path.Combine(folderName, fileName);
 
-                            await _db.Images.AddAsync(imageToSave);
-                            var result = await _db.SaveChangesAsync();
-                            if (result > 0)
+                            //var imageUrl = await _db.Images.FirstOrDefaultAsync(i => i.ImageSource.ToLower() == dbPath.ToLower());
+
+                            //if (imageUrl != null)
+                            //{
+                            //    return Conflict("Image name already exist");
+                            //}
+
+                            var fileExtention = Path.GetExtension(dbPath);
+
+                            if (fileExtention.ToLower() == ".jpg" || fileExtention.ToLower() == ".png" || fileExtention.ToLower() == ".jpeg")
                             {
-                                return Ok(new { dbPath });
+
+                                using (FileStream fileStream = System.IO.File.Create(pathToSave + "\\" + fileName))
+                                {
+                                    await file.CopyToAsync(fileStream);
+                                    fileStream.Flush();
+                                    var imageToSave = new Image()
+                                    {
+                                        ImageSource = dbPath,
+                                        ColorId = color.ColorId,
+                                        ProductId = product.ProductId,
+                                        ImageName = fileName
+                                    };
+
+                                    if (!product.Images.Any(c => c.Default))
+                                    {
+                                        imageToSave.Default = true;
+                                    }
+
+                                    await _db.Images.AddAsync(imageToSave);
+                                    var result = await _db.SaveChangesAsync();
+                                    if (result < 0)
+                                    {
+                                        return BadRequest("Failed to save image path");
+
+                                    }
+                                }
                             }
                             else
                             {
-                                return BadRequest("Failed to save image path");
+                                return BadRequest("Support Only files with type jpg or png");
                             }
                         }
+                        else
+                        {
+                            return BadRequest("Failed to upload product image");
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        return BadRequest("Support Only files with type jpg or png");
+                        return BadRequest(ex);
                     }
-                } else
-                {
-                    return BadRequest("Failed to upload product image");
                 }
+
+                return StatusCode(201, "Images uploaded successfully");
             }
-            catch (Exception ex)
+            else
             {
-                return BadRequest(ex);
+                return BadRequest("You need to insert at least one image per product");
             }
+
         }
 
         #endregion
